@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>REC — 프로토타입</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Nanum+Gothic+Coding:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 조용한 홈비디오. 말은 언니의 녹음뿐, 나머지는 기계 소리.
+   IDEA: 1998년 브라운관 TV + VCR 데크. 조작부가 곧 퍼즐 도구.
+   PICTURE: 2색 디더링 홈비디오 화면, 그 위 VCR OSD(PLAY, 시각, 카운터).
+   COLOUR/TYPE: 짙은 적갈 #22080a + 바랜 크림 #e6e0cf. DotGothic16 / Nanum Gothic Coding / 테이프 라벨은 Nanum Pen Script.
+   LAYOUT: TV와 데크 왼쪽, 테이프 선반·단서·기록 오른쪽. 760px 아래는 한 줄. */
+:root{color-scheme:dark;--d:#22080a;--l:#e6e0cf;--m:#5a2a2c;--k:#120405}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;background:var(--k);color:var(--l);font:16px/1.55 'DotGothic16','Nanum Gothic Coding',monospace;overflow-x:clip}
+.wrap{max-width:1120px;margin:0 auto;padding:clamp(10px,3vw,30px) max(3vw,10px)}
+.top{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.top h1{font-size:clamp(30px,5vw,44px);line-height:1;margin:0;letter-spacing:.06em}
+.top h1 i{display:inline-block;width:.42em;height:.42em;border-radius:50%;background:var(--l);margin-right:.25em;vertical-align:.12em;animation:bl 1.2s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+.top small{display:block;font-size:13px;opacity:.6;margin-top:6px}
+.main{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:14px;align-items:start}
+.tv{background:#1a0607;border:3px solid var(--l);border-radius:22px;padding:clamp(10px,2vw,20px);box-shadow:inset 0 0 0 6px var(--d)}
+.screen{position:relative;border-radius:14px;overflow:hidden;border:2px solid var(--m);background:var(--d)}
+.screen canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.screen::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);pointer-events:none;border-radius:14px;box-shadow:inset 0 0 40px rgba(0,0,0,.6)}
+.cc{margin-top:10px;min-height:2.2em;font-size:16px;text-align:center}
+.cc.dim{opacity:.4}
+.slot{font:inherit;min-height:36px;min-width:0;padding:0 6px;margin:2px 2px;border:0;border-bottom:2px dashed var(--l);background:transparent;color:var(--l)}
+.slot:hover{background:var(--m);color:var(--l)}
+.cc .who{display:block;font-size:12px;opacity:.6}
+.deck{margin-top:12px;border:3px solid var(--l);background:var(--d);padding:12px 14px;display:grid;gap:10px}
+.r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.r label,.r .lb{font-size:13px;opacity:.8;min-width:5.6em}
+button.act{background:var(--l);color:var(--d)}
+.tc{font-size:15px;min-width:4.6em;text-align:right;font-variant-numeric:tabular-nums}
+button{font:inherit;color:var(--l);background:var(--d);border:2px solid var(--l);min-height:44px;min-width:44px;padding:4px 12px;cursor:pointer;touch-action:manipulation}
+button:hover{background:var(--l);color:var(--d)}button:focus-visible{outline:3px solid var(--l);outline-offset:2px}
+button:disabled{opacity:.3;cursor:default;background:var(--d);color:var(--l)}
+.rec{width:100%;font-size:17px}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:140px;height:44px;background:transparent;cursor:pointer;touch-action:none}
+input[type=range]::-webkit-slider-runnable-track{height:10px;border:2px solid var(--l);background:linear-gradient(90deg,rgba(230,224,207,.4) 0 var(--rec,0%),transparent var(--rec,0%)),repeating-linear-gradient(90deg,var(--m) 0 2px,transparent 2px 8px)}
+input[type=range]::-moz-range-track{height:6px;border:2px solid var(--l);background:var(--m)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:30px;margin-top:-12px;background:var(--l);border:2px solid var(--d)}
+input[type=range]::-moz-range-thumb{width:16px;height:28px;background:var(--l);border:2px solid var(--d);border-radius:0}
+input[type=range]:disabled{opacity:.25;cursor:default}
+input[type=range]:focus-visible{outline:3px solid var(--l)}
+.side{display:grid;gap:14px}
+.panel{border:3px solid var(--l);background:var(--d);padding:12px 14px}
+.panel h2{font-size:15px;margin:0 0 10px;font-weight:400;opacity:.8}
+.shelf{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.tape{padding:6px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:84px}
+.tape .lbl{font-family:'Nanum Pen Script',cursive;font-size:21px;line-height:1;background:var(--l);color:var(--d);padding:3px 6px;width:100%;transform:rotate(-1.5deg)}
+.tape .reel{display:flex;gap:12px}.tape .reel i{width:14px;height:14px;border-radius:50%;border:2px solid currentColor;display:block}
+.tape small{font-size:11px;opacity:.7}
+.tape.on{background:var(--l);color:var(--d)}.tape.on .lbl{background:var(--d);color:var(--l)}
+.clue{white-space:pre-line;font-size:15px}
+.log{min-height:3em;white-space:pre-line;font-size:15px}
+.book{display:grid;gap:10px}
+.book .e{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:center;font-size:14px;border-top:1px dashed var(--m);padding-top:10px}
+.book .e img{width:96px;image-rendering:auto;border:2px solid var(--l);display:block}
+.book .e.t{grid-template-columns:minmax(0,1fr)}
+.empty{opacity:.5;font-size:14px}
+.keys{font-size:13px;opacity:.6;margin:12px 0 0}
+.ov{position:fixed;inset:0;background:rgba(18,4,5,.96);display:none;align-items:center;justify-content:center;padding:16px;z-index:10;overflow:auto}
+.ov.show{display:flex}
+.card{max-width:520px;width:100%;border:3px solid var(--l);background:var(--d);padding:22px;margin:auto}
+.card h2{font-size:clamp(36px,8vw,52px);line-height:1;margin:0 0 14px;font-weight:400;letter-spacing:.06em}
+.card p{margin:0 0 14px;white-space:pre-line}
+.lt{font-size:14px;opacity:.7;margin:0 0 6px}
+.paper{background:var(--l);color:var(--d);padding:16px 18px;font-family:'Nanum Pen Script',cursive;font-size:23px;line-height:1.35;transform:rotate(-.6deg)}
+.card .btns{display:flex;gap:8px;flex-wrap:wrap}
+.card ul{margin:0 0 18px;padding-left:1.1em;font-size:15px;opacity:.85}
+.card li{margin-bottom:4px}
+.full{position:fixed;inset:0;background:#000;display:none;z-index:30;align-items:center;justify-content:center;overflow:auto;padding:12px}
+.full.show{display:flex}
+.cutin{width:min(92vw,640px);cursor:pointer;margin:auto}
+#cutPic canvas{width:100%;image-rendering:pixelated;border:3px solid var(--l);display:block}
+#cutTxt{font-size:clamp(16px,2.6vw,21px);line-height:1.65;min-height:5.2em;margin:18px 4px 0;white-space:pre-line}
+.more{display:block;text-align:right;opacity:.5;animation:bl 1s steps(1) infinite}
+.paper2{background:var(--l);color:var(--d);padding:22px 26px;font-family:'Nanum Pen Script',cursive;font-size:clamp(23px,4vw,31px);line-height:1.35;white-space:pre-line;transform:rotate(-.8deg);min-height:280px}
+.paper2 .lh{font-family:'DotGothic16',monospace;font-size:14px;opacity:.6;margin-bottom:8px}
+#cutTitle{text-align:center;padding:70px 0 40px}
+#cutTitle h1{font-size:clamp(60px,13vw,120px);line-height:1;margin:0;letter-spacing:.08em;font-weight:400}
+#cutTitle h1 i{display:inline-block;width:.4em;height:.4em;border-radius:50%;background:var(--l);margin-right:.2em;vertical-align:.12em;animation:bl 1.2s steps(1) infinite}
+#cutTitle small{display:block;margin-top:14px;opacity:.6}
+#cutSkip{position:fixed;top:12px;right:12px;opacity:.65;z-index:2}
+.rin{width:min(96vw,920px);display:grid;gap:10px;margin:auto}
+.rv{position:relative;border:3px solid var(--l)}
+#roomc{width:100%;display:block;image-rendering:pixelated;touch-action:none;cursor:grab}
+#hint{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);background:var(--d);border:1px solid var(--l);padding:0 8px;font-size:14px;white-space:nowrap}
+#hint:empty{display:none}
+.rbox{border:4px double var(--l);padding:10px 14px;min-height:5.4em;background:var(--d);cursor:pointer}
+.rbox p{margin:0;white-space:pre-line;font-size:16px}
+.pad{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.mv{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,52px);gap:4px}
+.mv button{padding:0;min-width:0;touch-action:none;user-select:none;-webkit-user-select:none}
+#act{min-width:150px;min-height:56px;margin-left:auto}
+.rk{font-size:13px;opacity:.6;margin:0}
+.touch{display:none}
+@media (pointer:coarse){.touch{display:inline}.mouse{display:none}}
+@media (pointer:fine){.mv{display:none}}
+@media (prefers-reduced-motion:reduce){.top h1 i{animation:none}}
+@media(max-width:760px){
+  .r button{min-width:40px;padding:4px 6px}
+  .main{grid-template-columns:minmax(0,1fr)}
+  .side{display:contents}
+  .shelfp{order:-1}
+  .tv{border-radius:16px}
+  .deck{padding:10px}
+  .r label,.r .lb{min-width:100%}
+  .cc{font-size:15px}
+}
+</style></head><body>
+<div class="wrap">
+  <div class="top"><h1><i></i>REC</h1><small>언니가 부치지 못한 비디오테이프</small><button id="snd" type="button">소리 켬</button></div>
+  <div class="main">
+    <div>
+      <div class="tv"><div class="screen"><canvas id="tv" width="192" height="144"></canvas></div>
+        <div class="cc dim" id="cc">…</div></div>
+      <div class="deck">
+        <div class="r"><span class="lb">TAPE</span>
+          <button id="rew" type="button" aria-label="되감기">◀◀</button>
+          <button id="back" type="button" aria-label="0.2초 뒤로">◀❙</button>
+          <button id="play" type="button" aria-label="재생/정지">▶</button>
+          <button id="fwd" type="button" aria-label="0.2초 앞으로">❙▶</button>
+          <button id="ff" type="button" aria-label="빨리감기">▶▶</button>
+          <span class="tc" id="tcode">0:00:00</span></div>
+        <div class="r"><label for="tl">타임라인</label><input type="range" id="tl" min="0" max="60" step="0.05" value="0"></div>
+        <div class="r"><label for="tr" id="trl">TRACKING</label><input type="range" id="tr" min="0" max="1" step="0.01" value="0.5"></div>
+        <button class="rec" id="rec" type="button">■ 이 프레임 기록</button>
+      </div>
+    </div>
+    <div class="side">
+      <div class="panel shelfp"><h2>테이프</h2><div class="shelf" id="shelf"></div></div>
+      <div class="panel"><h2>지금 보이는 것</h2><div class="log" id="log"></div></div>
+      <div class="panel"><h2>단서</h2><div class="clue" id="clue"></div></div>
+      <div class="panel"><h2>기록한 장면</h2><div class="book" id="book"><div class="empty">아직 없다.</div></div>
+        <p class="keys">스페이스 재생/정지 · ←→ 한 칸 이동 · ↑↓ TRACKING · 타임라인을 빠르게 끌면 그 속도로 감긴다</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="ov show" id="boot"><div class="card" style="text-align:center"><h2>● REC</h2><p>소리를 켜고 플레이해 주세요.<br>클릭·탭 또는 Enter로 넘깁니다.</p><button type="button">시작</button></div></div>
+
+<div class="full" id="cut"><button id="cutSkip" type="button">건너뛰기 ▸</button>
+  <div class="cutin">
+    <div id="cutPic"><canvas id="cutc" width="192" height="108"></canvas></div>
+    <div id="cutLetter" class="paper2" hidden><div class="lh" id="cutLetterH"></div><div id="cutLetterP"></div></div>
+    <div id="cutTitle" hidden><h1><i></i>REC</h1><small>언니가 부치지 못한 비디오테이프</small></div>
+    <p id="cutTxt"></p><span class="more">▼</span>
+  </div></div>
+
+<div class="full" id="room"><div class="rin">
+  <div class="rv"><canvas id="roomc" width="256" height="144" aria-label="언니 방"></canvas><div id="hint"></div></div>
+  <div class="rbox"><p id="roomTxt"></p></div>
+  <div class="pad"><div class="mv"><button type="button" data-mv="f" style="grid-area:1/2" aria-label="앞으로">▲</button><button type="button" data-mv="l" style="grid-area:2/1" aria-label="왼쪽으로 돌기">◀</button><button type="button" data-mv="b" style="grid-area:2/2" aria-label="뒤로">▼</button><button type="button" data-mv="r" style="grid-area:2/3" aria-label="오른쪽으로 돌기">▶</button></div><button id="act" type="button" disabled>살펴보기</button></div>
+  <p class="rk"><span class="mouse">이동 WASD·방향키 · 둘러보기 화면 끌기 · 살펴보기 E</span><span class="touch">이동 ▲▼◀▶ · 둘러보기 화면 끌기 · 살펴보기 버튼이나 화면 탭</span></p>
+</div></div>
+
+<div class="ov" id="intro"><div class="card">
+  <h2>● PLAY</h2>
+  <p>화면이 지직거리더니, 테이프가 돌아가기 시작했다.</p>
+  <ul>
+    <li><b>타임라인</b>을 끌거나 ▶ ◀◀ ▶▶로 테이프를 돌려 본다.</li>
+    <li>이상한 장면에서 정지하고 <b>■ 이 프레임 기록</b>을 누른다.</li>
+    <li>테이프 2부터는 <b>TRACKING</b>을 돌리면 덮어쓰기 전 원래 녹화가 비친다.</li>
+  </ul>
+  <button id="start" type="button">재생</button>
+</div></div>
+
+<div class="ov" id="end"><div class="card">
+  <h2>■ STOP</h2>
+  <p id="endP"></p>
+  <div class="btns"><button id="endBtn" type="button">테이프 다시 보기</button><button id="restart" type="button" hidden>처음부터</button></div>
+</div></div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const W=192,H=144;
+const PAL=[[34,8,10],[230,224,207]];
+const B4=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const G=v=>{v=Math.max(0,Math.min(255,v|0));return `rgb(${v},${v},${v})`};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,k)=>a+(b-a)*k;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const HS=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x)};
+function ell(g,x,y,rx,ry,f){g.fillStyle=f;g.beginPath();g.ellipse(x,y,Math.max(.1,rx),Math.max(.1,ry),0,0,Math.PI*2);g.fill()}
+function poly(g,pts,f){g.fillStyle=f;g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(const p of pts.slice(1))g.lineTo(p[0],p[1]);g.closePath();g.fill()}
+
+/* ---------- 도트 스프라이트 (K=어두움 W=밝음 G=50% 체크 .=투명) ---------- */
+const SPR={"front":["......KKKKKKKK..........","....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKWKKK......","..KKKKKKKKKKKWWWKK......",".KKKKKKKKKKKKKWKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KWKKKKKKWKKKWKKKKKWK....","KWKKKKWWWKKWWWKKKKWK....","KWWKKWKWWKWWWKWKKWWK....","KKWKWWKWWWWWWKWWKWKK....","KKKKWWKWWWWWWKWWKKKK....","KKKKGWWWWWWWWWWGKKKK....","KKKKKKWWWWWWWWKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKWWKWWKWWKKKKKK....","KKKKKWWWWKKWWWWKKKKK....","KKKKWWKWWWWWWKWWKKKK....",".KKKKWKWWWWWWKWKKKK.....",".KKWWKWWWWWWWWKWWKK.....","..KWWKWWWWWWWWKWWK......","..KWWKWWWWWWWWKWWK......","...KKKWWWWWWWWKKK.......",".....KWWWWWWWWK.........",".....KKKKKKKKKK.........",".....KWWK..KWWK.........",".....KWWK..KWWK.........","......KK....KK.........."],"closed":["......KKKKKKKK..........","....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKWKKK......","..KKKKKKKKKKKWWWKK......",".KKKKKKKKKKKKKWKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KWKKKKKKWKKKWKKKKKWK....","KWKKKKWWWKKWWWKKKKWK....","KWWKKWWWWKWWWWWKKWWK....","KKWKWKWKWWWWKWKWKWKK....","KKKKWWKWWWWWWKWWKKKK....","KKKKGWWWWWWWWWWGKKKK....","KKKKKKWWWWWWWWKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKWWKWWKWWKKKKKK....","KKKKKWWWWKKWWWWKKKKK....","KKKKWWKWWWWWWKWWKKKK....",".KKKKWKWWWWWWKWKKKK.....",".KKWWKWWWWWWWWKWWKK.....","..KWWKWWWWWWWWKWWK......","..KWWKWWWWWWWWKWWK......","...KKKWWWWWWWWKKK.......",".....KWWWWWWWWK.........",".....KKKKKKKKKK.........",".....KWWK..KWWK.........",".....KWWK..KWWK.........","......KK....KK.........."],"look":["......KKKKKKKK..........","....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKWKKK......","..KKKKKKKKKKKWWWKK......",".KKKKKKKKKKKKKWKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KWKKKKKKWKKKWKKKKKWK....","KWKKKKWWWKKWWWKKKKWK....","KWWKKWKWWKWWWKWKKWWK....","KKWKWWKWWWWWWKWWKWKK....","KKKKWWKWWWWWWKWWKKKK....","KKKKGWWWWWWWWWWGKKKK....","KKKKKKWWWKKWWWKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKWWKWWKWWKKKKKK....","KKKKKWWWWKKWWWWKKKKK....","KKKKWWKWWWWWWKWWKKKK....",".KKKKWKWWWWWWKWKKKK.....",".KKWWKWWWWWWWWKWWKK.....","..KWWKWWWWWWWWKWWK......","..KWWKWWWWWWWWKWWK......","...KKKWWWWWWWWKKK.......",".....KWWWWWWWWK.........",".....KKKKKKKKKK.........",".....KWWK..KWWK.........",".....KWWK..KWWK.........","......KK....KK.........."],"read":["......KKKKKKKK..........","....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKWKKK......","..KKKKKKKKKKKWWWKK......",".KKKKKKKKKKKKKWKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KWKKKKKKWKKKWKKKKKWK....","KWKKKKWWWKKWWWKKKKWK....","KWWKKWWWWKWWWWWKKWWK....","KKWKWKWKWWWWKWKWKWKK....","KKKKWWKWWWWWWKWWKKKK....","KKKKGWWWWWWWWWWGKKKK....","KKKKKKWWWWWWWWKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKWWKWWKWWKKKKKK....","KKKKKWWWWKKWWWWKKKKK....","KKKKWWKKKKKKKKWWKKKK....",".KKKKWKWWKWWWKWKKKK.....",".KKWWKKWWKWWWKKWWKK.....","..KWWKKWWKWWWKKWWK......","..KWWKKKKKKKKKKWWK......","...KKKWWWWWWWWKKK.......",".....KWWWWWWWWK.........",".....KKKKKKKKKK.........",".....KWWK..KWWK.........",".....KWWK..KWWK.........","......KK....KK.........."],"front_b":["......KKKKKKKK..........","....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKWKKK......","..KKKKKKKKKKKWWWKK......",".KKKKKKKKKKKKKWKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KWKKKKKKWKKKWKKKKKWK....","KWKKKKWWWKKWWWKKKKWK....","KWWKKWKWWKWWWKWKKWWK....","KKWKWWKWWWWWWKWWKWKK....","KKKKWWKWWWWWWKWWKKKK....","KKKKGWWWWWWWWWWGKKKK....","KKKKKKWWWWWWWWKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKWWKWWKWWKKKKKK....","KKKKKWWWWKKWWWWKKKKK....","KKKKWWKWWWWWWKWWKKKK....",".KKKKWKWWWWWWKWKKKK.....",".KKWWKWWWWWWWWKWWKK.....","..KWWKWWWWWWWWKWWK......","..KWWKWWWWWWWWKWWK......","...KKKWWWWWWWWKKK.......",".....KWWWWWWWWK.........",".....KKKKKKKKKK.........","....K..K..K..K..........","...K..K....K..K.........","...KK.......KK.........."],"vil":["......KKKKKKKK..........","....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKKKKK......","..KKKKKKKKKKKKKKKK......",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKWKKWKKWKKWKKWKKWK....","KWWWWWWWKWWKWWWWWWWK....","KWWWWWKWWWWWWKWWWWWK....",".KWWWKWKWWWWKWKWWWK.....","..KWWWWWWWWWWWWWWK......","...KGWWWKWWKWWWGK.......",".....KWWWKKWWWK.........","......KKKKKKKK..........",".....KWKWWWWKWK.........","....KWWWKWWKWWWK........","...KWWKWWKWWWKWWK.......","..KWWKWWWKWWWWKWWK......","..KWWKWWWKWWWWKWWK......","...KKKKKKKKKKKKKK.......",".....KGGGGGGGGK.........",".....KGGGKKGGGK.........",".....KGGK..KGGK.........",".....KGGK..KGGK.........",".....KKKK..KKKK.........","......KK....KK.........."],"vil_b":["......KKKKKKKK..........","....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKKKKK......","..KKKKKKKKKKKKKKKK......",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKWKKWKKWKKWKKWKKWK....","KWWWWWWWKWWKWWWWWWWK....","KWWWWWKWWWWWWKWWWWWK....",".KWWWKWKWWWWKWKWWWK.....","..KWWWWWWWWWWWWWWK......","...KGWWWKWWKWWWGK.......",".....KWWWKKWWWK.........","......KKKKKKKK..........",".....KWKWWWWKWK.........","....KWWWKWWKWWWK........","...KWWKWWKWWWKWWK.......","..KWWKWWWKWWWWKWWK......","..KWWKWWWKWWWWKWWK......","...KKKKKKKKKKKKKK.......","......K......K..........","......KG....GK..........",".....KG......GK.........",".....KG......GK.........","....KG........GK........","....KK........KK........"],"vilclap":["......KKKKKKKK..........","....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKKKKK......","..KKKKKKKKKKKKKKKK......",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKWKKWKKWKKWKKWKKWK....","KWWWWWWWKWWKWWWWWWWK....","KWWWWWKWWWWWWKWWWWWK....",".KWWWKWKWWWWKWKWWWK.....","..KWWWWWWWWWWWWWWK......","...KGWWWKWWKWWWGK.......",".....KWWWKKWWWK.........","......KKKKKKKK..........",".....KWKWWWWKWK.........","....KKWWKKKKWWKK........",".....KKWKWWKWKK.........",".....KWWKKKKWWK.........",".....KWWWKWWWWK.........",".....KKKKKKKKKK.........",".....KGGGGGGGGK.........",".....KGGGKKGGGK.........",".....KGGK..KGGK.........",".....KGGK..KGGK.........",".....KKKK..KKKK.........","......KK....KK.........."],"stare":["......KKKKKKKK..........","....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKKKKK......","..KKKKKKKKKKKKKKKK......",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKWKKWKKWKKWKKWKKWK....","KWWWWWWWKWWKWWWWWWWK....","KWWWWWKWWWWWWKWWWWWK....",".KWWWWKWWWWWWKWWWWK.....","..KWWWKWWWWWWKWWWK......","...KGWWWKWWKWWWGK.......",".....KWWWKKWWWK.........","......KKKKKKKK..........",".....KWKWWWWKWK.........","....KWWWKWWKWWWK........","...KWWKWWKWWWKWWK.......","..KWWKWWWKWWWWKWWK......","..KWWKWWWKWWWWKWWK......","...KKKKKKKKKKKKKK.......",".....KGGGGGGGGK.........",".....KGGGKKGGGK.........",".....KGGK..KGGK.........",".....KGGK..KGGK.........",".....KKKK..KKKK.........","......KK....KK.........."],"mask":["......KKKKKKKK..........","....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKKKKK......","..KKKKKKKKKKKKKKKK......",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKWKKWKKWKKWKKWKKWK....","KWWWWWWWKWWKWWWWWWWK....","KWWWWWWWWWWWWWWWWWWK....",".KWWWWWWWWWWWWWWWWK.....","..KWWWWWWWWWWWWWWK......","...KGWWWKWWKWWWGK.......",".....KWWWKKWWWK.........","......KKKKKKKK..........",".....KWKWWWWKWK.........","....KWWWKWWKWWWK........","...KWWKWWKWWWKWWK.......","..KWWKWWWKWWWWKWWK......","..KWWKWWWKWWWWKWWK......","...KKKKKKKKKKKKKK.......",".....KGGGGGGGGK.........",".....KGGGKKGGGK.........",".....KGGK..KGGK.........",".....KGGK..KGGK.........",".....KKKK..KKKK.........","......KK....KK.........."],"mefront":["....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","...KKKKKKKKKKKKKK.......","..KKKKKKKKKKKKKKKK......","..KKKKKKKKKKKKKKKK......",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKKKKWKKWKKWKKWKKKK....","KKKKWWWWKWWKWWWWKKKK....","KKKKWWKWWWWWWKWWKKKK....",".KKKWWKWWWWWWKWWKKK.....",".KKKWWKWWWWWWKWWKKK.....","KKKKKGWWWWWWWWGKKKKK....",".KKKKKWWWWWWWWKKKKK.....","......KKKKKKKK..........",".....KGGGGGGGGK.........","....KGGGGGGGGGGK........","...KGGKGGGGGGKGGK.......","..KGGKGGGGGGGGKGGK......","..KGGKGGGGGGGGKGGK......","...KKKGGGGGGGGKKK.......",".....KKKKKKKKKK.........",".....KKKKKKKKKK.........",".....KKKK..KKKK.........",".....KKKK..KKKK.........",".....KKKK..KKKK.........","......KK....KK.........."],"meback":["....KKKKKKKKKKKK........","...KKKKKKKKKKKKKK.......","...KKKKKKKKKKKKKK.......","..KKKKKKKGKKKKKKKK......","..KKKKKKKKGKKKKKKK......",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKKKKKKKKKKKKKKK....","KKKKKKKKKKKKKKKKKKKK....",".KKKKKKKKKKKKKKKKKK.....",".KKKKKKKKKKKKKKKKKK.....","KKKKKKKKKKKKKKKKKKKK....",".KKKKKKKKKKKKKKKKKK.....","......KKKKKKKK..........",".....KGGGGGGGGK.........","....KGGGGGGGGGGK........","...KGGKGGGGGGKGGK.......","..KGGKGGGGGGGGKGGK......","..KGGKGGGGGGGGKGGK......","...KKKGGGGGGGGKKK.......",".....KKKKKKKKKK.........",".....KKKKKKKKKK.........",".....KKKK..KKKK.........",".....KKKK..KKKK.........",".....KKKK..KKKK.........","......KK....KK.........."],"hiker":["......KKKKKKKK..........","....KKGGGGGGGGKK........","...KGGGGGGGGGGGGK.......","..KGGGGGGGGGGGGGGK......","..KGGGGGGGGGGGGGGK.KKKK.",".KKKKKKKKKKKKKKKKKKKKKK.",".KWWWWWWWWWWWWWWWWK.....",".KWWWWWWWWWWWWWWWWK.....",".KWWWWWWWWWWWWWWWWK.....","KWWWWWWWWWWWWWWWWWWK....","KWWWWWWWWWWWWWWWWWWK....","KWWWWWKWWWWWWKWWWWWK....",".KWWWWKWWWWWWKWWWWK.....","..KWWWKWWWWWWKWWWK......","...KKWWWWWWWWWWKK.......",".....KWWWWWWWWK.........","......KKKKKKKK..........",".....KGKGGGGKGK.........","....KGGKGGGGKGGK........","...KGGKKGGGGKKGGK.......","..KGGKGKGGGGKGKGGK......","..KGGKGGGGGGGGKGGK......","...KKKGGGGGGGGKKK.......",".....KKKKKKKKKK.........",".....KKKKKKKKKK.........",".....KKKK..KKKK.........",".....KKKK..KKKK.........",".....KKKK..KKKK.........","......KK....KK.........."]};
+function blit(TC,rows,x0,y0,night,clip,sc=1){const hh=Math.round(rows.length*sc),ww=Math.round(rows[0].length*sc);for(let dy=0;dy<hh;dy++){const yy=y0+dy;if(yy<0||yy>=H||(clip!=null&&yy>=clip))continue;const r=rows[Math.min(rows.length-1,Math.floor(dy/sc))];for(let dx=0;dx<ww;dx++){let c=r[Math.min(r.length-1,Math.floor(dx/sc))];if(c==='.')continue;if(night)c=c==='W'?'G':c==='G'?'K':c;const xx=x0+dx;if(xx<0||xx>=W)continue;const lt=c==='W'||(c==='G'&&((xx+yy)&1));TC.fillStyle=lt?'#e6e0cf':'#22080a';TC.fillRect(xx,yy,1,1)}}}
+const star=rows=>{const r=rows.map(x=>x.split(''));for(const[x,y]of[[14,3],[13,4],[14,4],[15,4],[14,5]])r[y][x]='W';return r.map(a=>a.join(''))};
+SPR.wave=SPR.front;SPR.vilwave=SPR.vil;SPR.vilwave2=SPR.vil;   // 손 흔들기 포즈는 쓰지 않음
+for(const k of['front','closed','look','read','front_b','wave'])SPR[k]=star(SPR[k]);
+SPR.vilstar=star(SPR.vil);SPR.vilstarwave=star(SPR.vilwave);SPR.vilstarwave2=star(SPR.vilwave2);SPR.vilstar_b=star(SPR.vil_b);
+const CAM={x:0,y:0};
+let SP=[];const put=(k,x,y,o={})=>{const sc=o.sc||1;SP.push({k,sc,x:Math.round(x+CAM.x-9*sc),y:Math.round(y+CAM.y-SPR[k].length*sc),night:!!o.night,clip:o.clip})};
+const step=(t,r=4)=>Math.floor(t*r)%2===1;
+
+/* ---------- 테이프 데이터 ---------- */
+const TAPES=[
+  {label:'마을 잔치',date:'OCT.03.1998',track:false,segs:[[0,60,14*60+2,14*60+31]],
+   bleeds:[[21.5,22.7,'a','「…이거 보면 답장해. 나 여기 있어.」'],[44,45.2,'b','「11월 10일 밤, 마을 끝 다리. 거기서 다 보여 줄게.」']],
+   caps:{V:[[2,6,'「올해도 다 같이 모였네.」'],[8,12,'「바깥은 무서운 데야.」'],[14,18,'「여기 있으면 아무 일 없어.」'],[26,30,'「다 같이. 똑같이.」'],[34,38,'(모두 동시에 카메라를 본다)'],[39,43,'「나간 애들은 그것이 돼서 돌아와.」'],[50,55,'「올해도 다 같이 모였네.」']]},
+   clue:'언니의 마지막 편지:\n「마을 사람들이 덮어써도, 사이사이엔 내가 남아 있을 거야.」\n\n잔치 영상 사이에 언니가 끼어 있는 장면 두 개를 찾아 기록하자.'},
+  {label:'11월 10일',date:'NOV.10.1998',track:true,segs:[[0,60,23*60+10,23*60+40]],
+   caps:{V:[[3,7,'「저기다.」'],[10,14,'「바깥에서 온 그것이야.」'],[20,24,'「가까이 가지 마. 말 걸지 마.」'],[32,37,'「그것이 누굴 데려간다.」'],[48,52,'「우린 다 봤어.」']],
+         O:[[3,7,'(바람 소리)'],[28,30,'(발소리)'],[30,34,'「…찍히고 있어? 응. 이 분이 길 알려 주신대.」'],[35,39,'「산 넘어가는 길. 너한테 가는 길.」'],[40,44,'「무섭지 않아. 그냥 사람이야.」'],[50,56,'(지지직— 덮어쓰기 시작)']],
+         X:[[10,14,'「저 사람들, 왜 다 똑같이 생겼지?」'],[20,24,'「얼굴이… 다 가면 같아.」'],[32,37,'「아가씨, 저 사람들이 계속 쳐다보네.」']]},
+   clue:'테이프 1 속 언니: 「11월 10일 밤, 마을 끝 다리. 거기서 다 보여 줄게.」\n\n덮어쓴 테이프는 TRACKING이 어긋나면 원래 녹화가 비친다.\n어둡게도, 밝게도 돌려 보자.'},
+  {label:'11월 17일',date:'NOV.17.1998',track:true,segs:[[0,60,23*60+30,24*60]],
+   lines:[
+    {a:4,b:12,pre:'나 ',post:' 갈 거야.',opt:['그것들한테','너한테','이장님한테'],ans:1,frag:'나 ■한테 갈 거야.'},
+    {a:18,b:26,pre:'바깥 사람들은 ',post:'',opt:['괴물이야.','무서워.','그냥 사람이야.'],ans:2,frag:'바깥 사람들은 ■■ ■■■■.'},
+    {a:32,b:40,pre:'여기 사람들도 ',post:'',opt:['날 지켜 줄 거야.','나쁜 사람은 아니야.','다 그것이 될 거야.'],ans:1,frag:'여기 사람들도 ■■ ■■■ ■■■.'},
+    {a:46,b:54,pre:'꼭 ',post:'. 기다려.',opt:['남을게','갈게','숨을게'],ans:1,frag:'꼭 ■■. 기다려.'}],
+   caps:{V:[[0,4,'(마을회관. 이장의 목소리)'],[12,18,'「…들었지? 그것들이 저 애를 꾀어 갔어.」'],[26,32,'「바깥 얘기는 하지 마. 듣지도 마.」'],[40,46,'「이제 다 같이. 똑같이.」'],[54,60,'「이제 다 같이. 똑같이.」']],
+         O:[[0,4,'(지퍼 잠그는 소리)'],[12,18,'(사진을 카메라에 비춘다)'],[26,32,'(창밖 바람 소리)'],[40,46,'(문 두드리는 소리)'],[54,57,'(문이 열린다)'],[57,60,'「…」']],
+         X:[[12,18,'「저 사람들, 오늘따라 다 모였네.」'],[26,32,'「얼굴이 다 같아서 누가 누군지 모르겠어.」']]},
+   clue:'테이프 라벨 뒤 언니 글씨:\n「자막도 바꿔 놨을 거야. 그래도 원본엔 내 자막이 남아. 글자 수는 못 지워.」\n\n자막의 밑줄 단어를 눌러 바꾸자.\nTRACKING을 밝게 하면 원본 자막이 ■ 칸으로 비친다.\n다 맞췄다 싶으면 ■ 자막 대조.'},
+  {label:'REC',date:'NOV.18.2004',track:true,live:true,segs:[[0,60,23*60+40,24*60+40]],
+   caps:{V:[[8,12,'(문 두드리는 소리)'],[14,20,'「그것이 언니 방에 있다.」'],[22,28,'「나가라고 해. 바깥으로.」'],[40,46,'「…돌아가자.」']],
+         O:[[8,12,'(문 두드리는 소리)'],[14,20,'(창밖에 사람들이 모인다)'],[32,40,'(창문을 톡, 톡 두드리는 소리)'],[40,46,'(발소리가 멀어진다)'],[55,60,'(문 열리는 소리)']],
+         X:[[14,20,'(다 똑같은 얼굴이다)'],[22,28,'(누가 누군지 모르겠다)'],[32,40,'(…)']]},
+   clue:'라벨 대신 빨간 글씨 「REC」.\n넣자마자 녹화 표시가 켜졌다. 카메라는 지금 이 방을 찍고 있다.\n녹화된 데까지만 되감아 볼 수 있다.\n\n언니는 내가 준 별 모양 머리핀을 늘 꽂고 있었다.\n\n똑같은 얼굴들 중에서 언니를 찾아 기록하자.'}
+];
+const S={rec:0,left:0,tp:0,t:0,playing:false,speed:1,vel:0,sub:[0,0,0,0],restored:0,ccKey:'',v:.5,unlocked:[1,0,0,0],done:[0,0,0,0],got:{},scrub:0,stat:0,wave:0,book:[],over:false,lock:0};
+const vis=(v,c)=>clamp(1-Math.abs(v-c)/.09,0,1);
+function band(){const T=TAPES[S.tp];if(!T.track)return'V';return vis(S.v,.82)>.5?'O':vis(S.v,.18)>.5?'X':'V'}
+function bleedAt(t){const T=TAPES[S.tp];return(T.bleeds||[]).find(b=>t>=b[0]&&t<b[1])}
+
+/* ---------- 장면 ---------- */
+function mountains(g,night){
+  poly(g,[[0,0],[0,96],[40,70],[70,84],[96,58],[120,80],[150,62],[192,90],[192,0]],'rgba(0,0,0,0)');
+  poly(g,[[-10,110],[-10,8],[30,30],[58,52],[86,40],[110,56],[138,34],[168,20],[202,4],[202,110]],night?G(30):G(150));
+  poly(g,[[-10,110],[-10,26],[22,54],[48,72],[80,64],[104,78],[132,60],[160,46],[202,30],[202,110]],night?G(14):G(108));
+  if(!night){g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=1;g.beginPath();g.moveTo(-10,8);g.lineTo(30,30);g.lineTo(58,52);g.moveTo(138,34);g.lineTo(168,20);g.lineTo(202,4);g.stroke()}
+}
+function village(g,t){
+  let gr=g.createLinearGradient(0,0,0,100);gr.addColorStop(0,G(238));gr.addColorStop(1,G(200));g.fillStyle=gr;g.fillRect(-20,-20,W+40,130);
+  for(let i=0;i<3;i++){const x=((i*80+t*5)%260)-40,y=10+i*9;ell(g,x,y,14,4,G(250));ell(g,x+9,y-2,9,4,G(250))}
+  for(let i=0;i<3;i++){const k=((t*.07+i*.33)%1),x=-10+k*220,y=24+i*6+Math.sin(t*2+i)*3,w=step(t+i*.13,6)?2:3;g.strokeStyle=G(40);g.lineWidth=1;g.beginPath();g.moveTo(x-3,y-w+2);g.lineTo(x,y);g.lineTo(x+3,y-w+2);g.stroke()}
+  mountains(g,false);
+  g.fillStyle=G(176);g.fillRect(-20,96,W+40,60);g.fillStyle='rgba(0,0,0,.08)';for(let i=0;i<40;i++)g.fillRect(HS(i)*W,96+HS(i+7)*48,3,1);
+  poly(g,[[70,150],[92,96],[110,96],[132,150]],G(200));
+  g.fillStyle=G(225);g.fillRect(140,64,46,34);poly(g,[[134,66],[163,48],[192,66]],G(62));g.fillStyle=G(60);g.fillRect(158,80,10,18);g.fillStyle=G(40);g.fillRect(146,70,8,6);g.fillRect(172,70,8,6);
+  g.fillStyle=G(240);g.fillRect(150,56,26,6);g.fillStyle=G(70);for(let i=0;i<5;i++)g.fillRect(152+i*5,58,3,2);
+  const sw=Math.sin(t*1.8)*1.5;g.fillStyle=G(58);g.fillRect(24,52,6,46);ell(g,27+sw*.5,44,20,17,G(92));for(let i=0;i<40;i++){g.fillStyle=HS(i)<.5?G(60):G(130);g.fillRect(9+HS(i+3)*36+sw*(HS(i+5)),28+HS(i+9)*30,2,2)}
+  g.strokeStyle=G(40);g.lineWidth=1;g.beginPath();g.moveTo(30,36);g.quadraticCurveTo(90,52+Math.sin(t*1.5),150,50);g.stroke();
+  for(let i=0;i<11;i++){const x=36+i*10.5,y=36+Math.sin(i/10*Math.PI)*12+i*.9,f=Math.sin(t*7+i*1.3)*2.5;poly(g,[[x,y],[x+6,y],[x+3+f,y+6]],i%2?G(40):G(245))}
+  // 마을 사람들: 걸어 들어옴 → 박수 → 동시에 응시 → 원을 그리며 걸음
+  const stare=t>=34&&t<38;
+  for(let i=0;i<5;i++){let x=54+i*20,y=120,k='vil';
+    if(t<6){x+=lerp(140,0,t/6);k=step(t)?'vil_b':'vil'}
+    else if(t<34){k=step(t,2.5)?'vilclap':'vil';y+=step(t,2.5)?-1:0}
+    else if(stare)k='stare';
+    else if(t<50){const a=(t-38)*.5;x+=Math.sin(a)*14;y+=Math.cos(a)*3-3;k=step(t)?'vil_b':'vil'}
+    else{k=step(t,2.5)?'vilclap':'vil'}
+    put(k,x,y)}
+}
+function roomBleed(g,t){
+  g.fillStyle=G(70);g.fillRect(0,0,W,H);g.fillStyle=G(100);g.fillRect(0,0,W,104);
+  g.fillStyle=G(30);g.fillRect(124,16,48,46);g.fillStyle=G(150);g.fillRect(128,20,40,38);g.fillStyle=G(30);g.fillRect(147,20,2,38);g.fillRect(128,38,40,2);
+  g.fillStyle=G(200);g.fillRect(22,20,22,28);g.fillStyle=G(90);ell(g,33,32,6,6,G(90));
+  g.fillStyle=G(55);g.fillRect(0,104,W,40);
+  const gr=g.createRadialGradient(96,70,10,96,70,90);gr.addColorStop(0,'rgba(255,255,255,.25)');gr.addColorStop(1,'rgba(0,0,0,.3)');g.fillStyle=gr;g.fillRect(0,0,W,H);
+  const blink=(t*10|0)%9===0;put(blink?'closed':'front',96+Math.sin(t*3)*1.2,124+(step(t,3)?-1:0));
+}
+function figure(g,x,y,s){g.fillStyle=G(4);g.beginPath();g.moveTo(x-7*s,y);g.lineTo(x-9.5*s,y-50*s);g.quadraticCurveTo(x,y-56*s,x+9.5*s,y-50*s);g.lineTo(x+7*s,y);g.closePath();g.fill();g.fillRect(x-1.6*s,y-56*s,3.2*s,4*s);ell(g,x,y-63*s,6.2*s,7.8*s,G(4));ell(g,x-2.4*s,y-64*s,1*s,1*s,G(255));ell(g,x+2.4*s,y-64*s,1*s,1*s,G(255))}
+function bridge(g,t,b){
+  g.fillStyle=G(18);g.fillRect(0,0,W,110);for(let i=0;i<26;i++){g.fillStyle=G(150+HS(i)*100);g.fillRect(HS(i+2)*W,HS(i+5)*44,1,1)}
+  ell(g,160,18,5,5,G(215));ell(g,160,18,12,12,'rgba(255,255,255,.1)');
+  mountains(g,true);
+  g.fillStyle=G(28);g.fillRect(0,100,W,44);
+  // 개울과 다리
+  g.fillStyle=G(10);g.fillRect(0,112,W,10);g.fillStyle='rgba(255,255,255,.22)';for(let i=0;i<14;i++)g.fillRect(((HS(i+40)*W+t*(10+HS(i)*14))%(W+20))-10,114+HS(i+41)*6,6,1);
+  g.fillStyle=G(70);g.fillRect(84,98,108,6);g.fillStyle=G(50);g.beginPath();g.moveTo(84,104);g.quadraticCurveTo(138,128,192,104);g.lineTo(192,112);g.lineTo(84,112);g.closePath();g.fill();
+  g.fillStyle=G(110);g.fillRect(84,88,108,2);for(let x=88;x<192;x+=12)g.fillRect(x,88,2,10);
+  // 가로등
+  g.fillStyle=G(40);g.fillRect(96,48,2,52);g.fillRect(96,48,8,2);ell(g,104,52,3,2,G(250));
+  let gr=g.createRadialGradient(104,56,2,110,96,62);gr.addColorStop(0,'rgba(255,255,255,.5)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(40,40,152,104);
+  if(b==='V'||b==='X'){
+    for(let i=0;i<3;i++){const x=24+i*20+Math.sin(t*1.3+i)*1.5,fl=.45+Math.sin(t*13+i*2)*.12;gr=g.createRadialGradient(x+7,104,1,x+7,104,16);gr.addColorStop(0,`rgba(255,255,255,${fl})`);gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(x-12,86,38,36);ell(g,x+7,104,2,2.6,G(255))}
+    if(b==='V'){if(t>=26&&t<48)figure(g,lerp(176,146,clamp((t-26)/6,0,1))+Math.sin(t*.9)*1.5,104,1.15+Math.sin(t*1.7)*.01);else ell(g,182,64,1,1,G(230))}
+  }
+}
+function bridgeSprites(t,b){
+  if(b==='V'||b==='X'){const k=b==='X'?'mask':'vil';for(let i=0;i<3;i++)put(k,24+i*20+Math.sin(t*1.3+i)*1.5,122+(step(t+i*.2,1.5)?-1:0))}
+  if(b==='O'){
+    let sx=null,hx=null,k='front';
+    let hk='hiker',hy=106;
+    if(t>=26&&t<30){sx=lerp(20,122,(t-26)/4);k=step(t)?'front_b':'front'}else if(t>=30&&t<45){sx=122+Math.sin(t*2)*.8;hx=144;hy=106+(step(t,1.2)?-1:0);if(t>=40&&t<44)k=step(t)?'wave':'front';else if((t*10|0)%11===0)k='closed'}else if(t>=45&&t<50){sx=lerp(122,215,(t-45)/5);hx=sx+22;k=step(t)?'front_b':'front'}
+    if(S.wave)k=Math.floor(performance.now()/250)%2?'wave':'front';
+    if(hx!=null)put(hk,hx,hy);if(sx!=null)put(k,sx,106);
+  }
+}
+function hall(g,t,b){
+  g.fillStyle=G(118);g.fillRect(-10,-10,W+20,120);g.fillStyle='rgba(0,0,0,.18)';for(let x=-10;x<W+10;x+=9)g.fillRect(x,-10,1,120);
+  g.fillStyle=G(240);g.fillRect(56,10,80,16);g.fillStyle=G(60);for(let i=0;i<6;i++)g.fillRect(62+i*12,14,8,8);
+  for(const x of[10,150]){g.fillStyle=G(30);g.fillRect(x,30,30,24);g.fillStyle=G(80);g.fillRect(x+14,30,2,24)}
+  g.fillStyle=G(150);g.fillRect(-10,104,W+20,50);g.fillStyle=G(60);g.fillRect(-10,104,W+20,2);
+  let gr=g.createRadialGradient(96,0,4,96,50,110);gr.addColorStop(0,'rgba(255,255,255,.3)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,W,H);
+  const k=b==='X'?'mask':'vil';const nod=step(t,1.2);
+  for(let i=0;i<5;i++)put(k,40+i*28,104+(nod?1:0));
+  for(let i=0;i<4;i++)put(k,54+i*28,126+(nod?1:0));
+  put(b==='X'?'mask':(step(t,3)?'vil':'stare'),20,118+(step(t,2)?-1:0));
+}
+function room17(g,t){
+  g.fillStyle=G(92);g.fillRect(-10,-10,W+20,116);g.fillStyle='rgba(0,0,0,.08)';for(let x=-10;x<W+10;x+=8)for(let y=0;y<104;y+=10)g.fillRect(x+((y/10|0)%2)*4,y,2,2);
+  g.fillStyle=G(50);g.fillRect(-10,104,W+20,50);
+  // 창문 (마을 불빛)
+  g.fillStyle=G(170);g.fillRect(132,16,46,40);g.fillStyle=G(12);g.fillRect(135,19,40,34);
+  for(let i=0;i<9;i++)ell(g,138+HS(i)*34,40+HS(i+3)*10,.8,.8,(t*3+i|0)%7===0?G(80):G(240));
+  g.fillStyle=G(170);g.fillRect(154,19,2,34);
+  // 문 (간유리)
+  const open=t>=54;
+  g.fillStyle=G(160);g.fillRect(8,24,36,82);
+  if(open){g.fillStyle=G(6);g.fillRect(11,27,30,79);poly(g,[[11,27],[2,22],[2,110],[11,106]],G(120))}
+  else{g.fillStyle=G(110);g.fillRect(11,27,30,79);g.fillStyle=G(190);g.fillRect(15,32,22,26);ell(g,37,70,1.6,1.6,G(220));
+    if(t>=42){for(let i=0;i<3;i++){const x=19+i*7;ell(g,x,44,3.2,3.8,G(70));g.fillStyle=G(70);g.fillRect(x-4,48,8,10)}}}
+  // 침대와 가방
+  g.fillStyle=G(70);g.fillRect(60,92,70,16);g.fillStyle=G(200);g.fillRect(60,86,70,8);
+  g.fillStyle=G(150);g.fillRect(96,76,22,12);g.fillStyle=G(60);g.fillRect(100,72,14,4);
+  gr=g.createRadialGradient(150,80,4,120,90,90);gr.addColorStop(0,'rgba(255,255,255,.28)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,W,H);
+  // 언니
+  let x=96,y=118,k='front';
+  if(t<14){x=96+Math.sin(t*.9)*34;k=step(t)?'front_b':'front'}
+  else if(t<28){x=96;y=128;k=(t*10|0)%13===0?'closed':'front';g.fillStyle=G(240);g.fillRect(104+CAM.x*0,96,14,10);g.fillStyle=G(60);ell(g,111,100,2.4,2.4,G(80));g.fillRect(107,103,8,1)}
+  else if(t<42){x=lerp(96,150,clamp((t-28)/3,0,1));k=t<31?(step(t)?'front_b':'front'):'front'}
+  else if(t<54){x=lerp(150,60,clamp((t-42)/3,0,1));k=t<45?(step(t)?'front_b':'front'):((t*10|0)%9===0?'closed':'front')}
+  else{x=60;k=t>=57?'vilstar':'look'}
+  put(k,x,y);
+  if(open){const n=Math.min(4,Math.floor((t-54)*1.5)+1);for(let i=0;i<n;i++)put('vil',26+i*16,120+(i%2)*4)}
+}
+function room4(g,t,b){
+  g.fillStyle=G(84);g.fillRect(-10,-10,W+20,116);g.fillStyle='rgba(0,0,0,.08)';for(let x=-10;x<W+10;x+=8)for(let y=0;y<104;y+=10)g.fillRect(x+((y/10|0)%2)*4,y,2,2);
+  g.fillStyle=G(46);g.fillRect(-10,104,W+20,50);
+  const open=S.left&&t>=55;
+  g.fillStyle=G(160);g.fillRect(8,24,34,82);if(open){g.fillStyle=G(6);g.fillRect(11,27,28,79);poly(g,[[11,27],[2,22],[2,110],[11,106]],G(120))}else{g.fillStyle=G(108);g.fillRect(11,27,28,79);g.fillStyle=G(185);g.fillRect(15,32,20,24);ell(g,35,70,1.6,1.6,G(220))}
+  g.fillStyle=G(66);g.fillRect(44,96,36,14);g.fillStyle=G(196);g.fillRect(44,90,36,8);
+  g.fillStyle=G(175);g.fillRect(92,8,96,70);g.fillStyle=G(10);g.fillRect(95,11,90,64);
+  for(let i=0;i<12;i++)ell(g,98+HS(i)*84,58+HS(i+3)*14,.8,.8,(t*3+i|0)%7===0?G(80):G(230));
+  let gr=g.createRadialGradient(70,96,4,90,90,90);gr.addColorStop(0,'rgba(255,255,255,.22)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,W,H);
+  // 창밖 얼굴들
+  if(!S.left){const order=[1,0,2],draw=[0,2,1];let n=t<8?0:t<14?Math.floor((t-8)/2)+1:t<40?3:3-Math.floor((t-40)/3)-1;n=clamp(n,0,3);
+    const shown=order.slice(0,n);for(const i of draw){if(!shown.includes(i))continue;let k=b==='X'?'mask':'vil';if(b==='O'&&i===1)k=t>=32&&t<40?(step(t,2.5)?'vilstarwave':'vilstarwave2'):'vilstar';put(k,111+i*30,84+(step(t,1.2)?1:0),{clip:75})}}
+  g.fillStyle=G(175);g.fillRect(126,11,1,64);g.fillRect(155,11,1,64);
+  // 나
+  if(!S.left){const mx=60+Math.sin(t*.6)*3;if(b==='V')figure(g,mx,126,1.05);else put('meback',mx,126)}
+  else if(t>=55){const x=lerp(24,90,clamp((t-55)/2.5,0,1));put(t>=57.5?(step(t,2.5)?'vilstarwave':'vilstarwave2'):(step(t)?'vilstar_b':'vilstar'),x,124)}
+}
+function scene(g,tp,t){
+  SP=[];CAM.x=Math.sin(t*1.3)*1.4+Math.sin(t*3.7)*.6;CAM.y=Math.sin(t*1.7)*1+Math.sin(t*4.3)*.4;
+  g.setTransform(1,0,0,1,0,0);g.fillStyle=G(0);g.fillRect(0,0,W,H);g.setTransform(1,0,0,1,Math.round(CAM.x),Math.round(CAM.y));
+  if(tp===0){if(bleedAt(t))roomBleed(g,t);else village(g,t)}
+  else if(tp===1){const b=band();bridge(g,t,b);bridgeSprites(t,b)}
+  else if(tp===2){const b=band();if(b==='O')room17(g,t);else hall(g,t,b)}
+  else room4(g,t,band())
+  g.setTransform(1,0,0,1,0,0);const gr=g.createRadialGradient(96,72,40,96,72,124);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,.45)');g.fillStyle=gr;g.fillRect(0,0,W,H);
+}
+
+/* ---------- 렌더 ---------- */
+const OFF=document.createElement('canvas');OFF.width=W;OFF.height=H;const OG=OFF.getContext('2d',{willReadFrequently:true});
+const TV=$('tv'),TC=TV.getContext('2d');
+function clockOf(T,t){for(const s of T.segs)if(t>=s[0]&&t<=s[1]){const m=Math.round(lerp(s[2],s[3],(t-s[0])/(s[1]-s[0]||1)))%1440,h=Math.floor(m/60),mm=m%60;return `${h<12?'AM':'PM'} ${String(h%12||12).padStart(2,'0')}:${String(mm).padStart(2,'0')}`}return''}
+function tc(t){return `0:00:${String(Math.floor(t)).padStart(2,'0')}`}
+function render(){
+  const T=TAPES[S.tp],v=T.track?S.v:.5,off=(v-.5)*.35;
+  scene(OG,S.tp,S.t);
+  const id=OG.getImageData(0,0,W,H),d=id.data;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4,l=(d[i]*.3+d[i+1]*.59+d[i+2]*.11)/255,th=(B4[(y&3)*4+(x&3)]+.5)/16+(Math.random()-.5)*.06-off,c=l>th?PAL[1]:PAL[0];d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255}
+  TC.putImageData(id,0,0);
+  for(const s of SP)blit(TC,SPR[s.k],s.x,s.y,s.night,s.clip,s.sc);
+  if(S.tp===2&&band()==='O'){const ln=TAPES[2].lines.find(l=>S.t>=l.a&&S.t<l.b);if(ln){TC.font='11px sans-serif';TC.textAlign='center';TC.textBaseline='middle';const tx=S.restored?ln.pre+ln.opt[ln.ans]+ln.post:ln.frag,w=TC.measureText(tx).width+10;TC.fillStyle='#22080a';TC.fillRect(96-w/2,22,w,14);TC.fillStyle='#e6e0cf';TC.fillText(tx,96,29.5)}}
+  const dev=T.track?Math.abs(v-.5):0,bl=S.tp===0&&bleedAt(S.t),srch=Math.abs(S.vel)>1.5,gl=(srch?5:0)+Math.round(dev*10)+(bl?3:0);
+  if(!reduce)for(let k=0;k<gl;k++){const y=Math.random()*H|0,hh=1+Math.random()*4|0,dx=(Math.random()*16-8)|0;TC.drawImage(TV,0,y,W,hh,dx,y,W,hh)}
+  if(srch){const n=Math.abs(S.vel)>6?3:2;for(let j=0;j<n;j++){const by=((performance.now()/(S.vel<0?-9:9))+j*(H/n))%(H+12);const yy=by<0?by+H+12:by;for(let x=0;x<W;x++)for(let y=yy-6;y<yy;y++)if(Math.random()<.55){TC.fillStyle=Math.random()<.5?'#e6e0cf':'#22080a';TC.fillRect(x,y|0,1,1)}}}
+  if(dev>.12||bl){const by=(performance.now()/25)%(H+20)-10;for(let x=0;x<W;x++)for(let y=by;y<by+5;y++)if(Math.random()<.5){TC.fillStyle=Math.random()<.5?'#e6e0cf':'#22080a';TC.fillRect(x,y|0,1,1)}}
+  if(S.stat>0){const img=TC.getImageData(0,0,W,H),dd=img.data;for(let i=0;i<dd.length;i+=4){const c=Math.random()<.5?PAL[0]:PAL[1];dd[i]=c[0];dd[i+1]=c[1];dd[i+2]=c[2]}TC.putImageData(img,0,0)}
+  TC.font='10px DotGothic16, monospace';TC.textBaseline='top';
+  const txt=(s,x,y,al='left')=>{TC.textAlign=al;TC.fillStyle='#22080a';TC.fillText(s,x+1,y+1);TC.fillStyle='#e6e0cf';TC.fillText(s,x,y)};
+  const live=T.live&&!S.left&&Math.abs(S.t-S.rec)<.35,sp=Math.abs(S.vel),mode=live?(Math.floor(performance.now()/500)%2?'● REC':''):S.vel<-.2?(sp>1.5?'◀◀ REW ×'+Math.min(16,Math.round(sp)):'◀ REV'):sp>1.5?'▶▶ FF ×'+Math.min(16,Math.round(sp)):S.playing?'▶ PLAY':(Math.floor(performance.now()/500)%2?'❚❚ PAUSE':'');
+  if(S.stat<=0){txt(mode,8,7);txt('SP',184,7,'right');txt(T.date,184,114,'right');txt(clockOf(T,S.t),184,126,'right');txt(tc(S.t),8,126)}
+}
+
+/* ---------- 소리 ---------- */
+let AC=null,soundOn=true,hiss=null;
+function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}return AC}
+function tone(f,d,type='square',v=.03){const a=soundOn&&ac();if(!a)return;try{const o=a.createOscillator(),gn=a.createGain();o.type=type;o.frequency.value=f;gn.gain.setValueAtTime(v,a.currentTime);gn.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);o.connect(gn).connect(master||a.destination);o.start();o.stop(a.currentTime+d+.02)}catch(e){}}
+function startHiss(){const a=ac();if(!a||hiss)return;try{const n=a.sampleRate*2,b=a.createBuffer(1,n,a.sampleRate),c=b.getChannelData(0);for(let i=0;i<n;i++)c[i]=Math.random()*2-1;const s=a.createBufferSource();s.buffer=b;s.loop=true;const f=a.createBiquadFilter();f.type='highpass';f.frequency.value=2500;const gn=a.createGain();gn.gain.value=0;s.connect(f).connect(gn).connect(master||a.destination);s.start();hiss={gn}}catch(e){}}
+function setHiss(){if(!hiss)return;const T=TAPES[S.tp],dev=T.track?Math.abs(S.v-.5):0;hiss.gn.gain.value=soundOn?(S.playing||S.scrub>0?.008+Math.min(.04,Math.max(0,Math.abs(S.vel)-1.3)*.006):.004)+dev*.05+(S.stat>0?.08:0):0}
+$('snd').onclick=()=>{soundOn=!soundOn;$('snd').textContent=soundOn?'소리 켬':'소리 끔';if(master)master.gain.value=soundOn?1:0;setHiss()};
+
+/* ---------- 영상 소리: 테이프 시간에 묶인 배경음 · 효과음 · 목소리 ---------- */
+let master=null,NB=null,BEDS=null,CB=null,CBF=null;
+/* 웅성거림: 목소리 높이가 다른 여러 사람이 짧은 구절을 띄엄띄엄 말하는 걸 겹쳐 합성 */
+const CROWD=Array.from({length:9},(_,i)=>({f:i%3===0?220+HS(i)*50:105+HS(i)*45,pan:HS(i+20)*1.6-.8,t:HS(i+40)*1.5,left:0}));
+function cSyl(sp,r,rev,laugh){const a=AC;try{const t0=a.currentTime,d=laugh?.09:.1+Math.random()*.08,o=a.createOscillator();o.type='sawtooth';const f=sp.f*(.85+Math.random()*.35)*r*(laugh?1.35:1);
+  o.frequency.setValueAtTime(f,t0);o.frequency.linearRampToValueAtTime(f*(rev?1.12:.9+Math.random()*.15),t0+d);
+  const f1=a.createBiquadFilter();f1.type='bandpass';f1.frequency.value=(350+Math.random()*500)*Math.min(r,1.6);f1.Q.value=4;
+  const f2=a.createBiquadFilter();f2.type='bandpass';f2.frequency.value=(1000+Math.random()*1300)*Math.min(r,1.6);f2.Q.value=5;
+  const g=a.createGain(),v=laugh?.07:.045+Math.random()*.03;g.gain.setValueAtTime(.0001,t0);
+  if(rev){g.gain.exponentialRampToValueAtTime(v,t0+d*.85);g.gain.exponentialRampToValueAtTime(.0001,t0+d)}else{g.gain.exponentialRampToValueAtTime(v,t0+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+d)}
+  const pn=a.createStereoPanner?a.createStereoPanner():null;o.connect(f1);o.connect(f2);const mix=a.createGain();mix.gain.value=1;f1.connect(mix);f2.connect(mix);mix.connect(g);if(pn){pn.pan.value=sp.pan;g.connect(pn).connect(CB)}else g.connect(CB);
+  o.start(t0);o.stop(t0+d+.02)}catch(e){}}
+function crowdTick(dt,level,festive){if(!CB||level<.01)return;const av=Math.abs(S.vel),r=av>1.3?Math.min(2.6,av*.75):1,rev=S.vel<0,k=dt*Math.min(3,av);
+  const active=festive?9:6;for(let i=0;i<active;i++){const sp=CROWD[i];sp.t-=k;if(sp.t>0)continue;
+    if(sp.left>0){const laugh=festive&&Math.random()<.04;if(laugh){for(let j=0;j<4;j++)setTimeout(()=>cSyl(sp,r,rev,true),j*95);sp.left=0;sp.t=.6+Math.random()}else{cSyl(sp,r,rev);sp.left--;sp.t=.09+Math.random()*.11}}
+    else{sp.left=2+Math.floor(Math.random()*6);sp.t=.4+Math.random()*1.6}}}
+function audioInit(){const a=ac();if(!a||master)return;try{
+  master=a.createGain();master.gain.value=soundOn?1:0;master.connect(a.destination);
+  NB=a.createBuffer(1,a.sampleRate*2,a.sampleRate);const c=NB.getChannelData(0);for(let i=0;i<c.length;i++)c[i]=Math.random()*2-1;
+  const nb=(type,f,q,lfo)=>{const s=a.createBufferSource();s.buffer=NB;s.loop=true;const fl=a.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const m=a.createGain();m.gain.value=1;const g=a.createGain();g.gain.value=0;s.connect(fl).connect(m).connect(g).connect(master);s.start(0,Math.random()*1.5);
+    if(lfo){const o=a.createOscillator(),d=a.createGain();o.frequency.value=lfo;d.gain.value=.6;o.connect(d).connect(m.gain);o.start()}return g};
+  BEDS={wind:nb('lowpass',380,.7,.15),water:nb('bandpass',1500,.9,1.7),room:nb('lowpass',150,.7)};
+  CB=a.createGain();CB.gain.value=0;const cl=a.createBiquadFilter();cl.type='lowpass';cl.frequency.value=1700;const dl=a.createDelay();dl.delayTime.value=.06;const dg2=a.createGain();dg2.gain.value=.35;
+  CB.connect(cl);cl.connect(master);cl.connect(dl);dl.connect(dg2).connect(master);CBF=cl;
+  const dg=a.createGain();dg.gain.value=0;const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=240;lp.connect(dg).connect(master);for(const f of[55,55.7,82.4]){const o=a.createOscillator();o.type='sawtooth';o.frequency.value=f;o.connect(lp);o.start()}BEDS.drone=dg;
+}catch(e){}}
+function burst(d,type,f,q,v,r=1,sweep){const a=AC;if(!a||!master||!NB)return;try{const t0=a.currentTime,s=a.createBufferSource();s.buffer=NB;const fl=a.createBiquadFilter();fl.type=type;fl.frequency.setValueAtTime(f*r,t0);if(sweep)fl.frequency.linearRampToValueAtTime(sweep*r,t0+d);fl.Q.value=q;const g=a.createGain();g.gain.setValueAtTime(v,t0);g.gain.exponentialRampToValueAtTime(.0001,t0+d);s.connect(fl).connect(g).connect(master);s.start(t0,Math.random());s.stop(t0+d+.02)}catch(e){}}
+function osc(f,d,type,v,r=1,f2){const a=AC;if(!a||!master)return;try{const t0=a.currentTime,o=a.createOscillator();o.type=type;o.frequency.setValueAtTime(f*r,t0);if(f2)o.frequency.exponentialRampToValueAtTime(f2*r,t0+d);const g=a.createGain();g.gain.setValueAtTime(v,t0);g.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(g).connect(master);o.start(t0);o.stop(t0+d+.02)}catch(e){}}
+const SFX={
+  clap:r=>burst(.07,'bandpass',1600,.8,.22,r),
+  step:r=>{burst(.06,'lowpass',420,.8,.25,r);osc(90,.05,'sine',.08,r)},
+  heavy:r=>{burst(.12,'lowpass',180,.8,.35,r);osc(48,.15,'sine',.18,r)},
+  chirp:r=>{osc(2600,.07,'sine',.05,r,3600);setTimeout(()=>osc(2900,.06,'sine',.04,r,3800),90)},
+  cricket:r=>{for(let i=0;i<3;i++)setTimeout(()=>osc(4300,.025,'square',.012,r),i*45)},
+  zip:r=>burst(.45,'bandpass',700,3,.12,r,3200),
+  shutter:r=>{burst(.03,'highpass',3000,.7,.2,r);setTimeout(()=>burst(.04,'highpass',2400,.7,.15,r),70)},
+  creak:r=>{osc(190,.9,'sawtooth',.035,r,110);burst(.9,'bandpass',600,6,.05,r,380)},
+  knock:r=>{burst(.07,'lowpass',260,.9,.5,r);osc(70,.12,'sine',.25,r)},
+  tap:r=>{osc(1900,.035,'triangle',.08,r);burst(.02,'highpass',2500,.7,.06,r)},
+  tick:r=>osc(3200,.012,'square',.012,r),
+  gavel:r=>{burst(.1,'lowpass',300,1,.4,r);osc(60,.2,'sine',.2,r)}
+};
+const EV=(()=>{const L=[[],[],[],[]],add=(tp,t,k,b)=>L[tp].push([t,k,b]),rng=(a,b,st,f)=>{for(let x=a;x<b;x+=st)f(+x.toFixed(2))};
+  rng(6,34,.4,t=>add(0,t,'clap'));rng(50,60,.4,t=>add(0,t,'clap'));rng(0,6,.25,t=>add(0,t,'step'));rng(38,50,.25,t=>add(0,t,'step'));for(const t of[3,11,19,27,41,47,55])add(0,t,'chirp');
+  rng(0,60,.9,t=>add(1,t+HS(t)*.4,'cricket'));rng(26,30,.3,t=>add(1,t,'step','O'));rng(45,50,.3,t=>add(1,t,'step','O'));rng(26,32,.5,t=>add(1,t,'heavy','V'));
+  add(2,1,'zip','O');add(2,2.6,'zip','O');add(2,14.2,'shutter','O');for(const t of[44,45.2,46.4])add(2,t,'knock','O');add(2,54,'creak','O');rng(54.5,58,.3,t=>add(2,t,'step','O'));add(2,.5,'gavel','V');add(2,40,'gavel','V');
+  rng(0,60,1,t=>add(3,t,'tick'));for(const t of[8,8.8,9.6])add(3,t,'knock');rng(32,40,.55,t=>add(3,t,'tap','O'));rng(40,50,.35,t=>add(3,t,'step'));add(3,55,'creak','L');rng(55.3,57.5,.3,t=>add(3,t,'step','L'));
+  return L})();
+function fireEvents(prev,now){if(prev===now||!master)return;const av=Math.abs(S.vel);if(av>7)return;const r=av>1.3?Math.min(2.5,av*.8):1,b=band();let n=0;
+  for(const [t,k,bf] of EV[S.tp]){if(!((prev<t&&now>=t)||(prev>t&&now<=t)))continue;if(bf==='L'){if(!S.left)continue}else if(bf&&bf!==b)continue;if(S.tp===3&&S.left&&k!=='creak'&&k!=='step'&&k!=='tick')continue;SFX[k](r);if(++n>4)break}}
+function speaker(){const b=band();if(S.tp===0)return bleedAt(S.t)?'sis':'chorus';if(S.tp===1)return b==='O'?'sis':b==='X'?'hiker':'chorus';if(S.tp===2)return b==='O'?'sis':b==='X'?'hiker':'chief';return b==='O'?null:'chorus'}
+const VOX={sis:[[330,1]],chief:[[118,1]],hiker:[[185,1]],chorus:[[150,.55],[151,.55],[149.5,.55]]};
+let sylT=0;
+function syl(base,vol,r,rev){const a=AC;try{const t0=a.currentTime,o=a.createOscillator();o.type='triangle';const f=base*(.86+Math.random()*.34)*r;o.frequency.setValueAtTime(f,t0);o.frequency.linearRampToValueAtTime(f*(rev?1.18:.86),t0+.11);const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=800+Math.random()*900;bp.Q.value=1.1;const g=a.createGain();g.gain.setValueAtTime(.0001,t0);
+  if(rev){g.gain.exponentialRampToValueAtTime(.11*vol,t0+.1);g.gain.exponentialRampToValueAtTime(.0001,t0+.125)}else{g.gain.exponentialRampToValueAtTime(.11*vol,t0+.015);g.gain.exponentialRampToValueAtTime(.0001,t0+.125)}
+  o.connect(bp).connect(g).connect(master);o.start(t0);o.stop(t0+.14)}catch(e){}}
+function updateAudio(dt){if(!master||!BEDS)return;const a=AC,av=Math.abs(S.vel),fac=av<.2?0:av<=1.3?1:Math.max(0,1-(av-1.3)/2.5),b=band(),t=S.t;
+  const tg={wind:0,water:0,crowd:0,room:0,drone:0};
+  if(S.tp===0){if(bleedAt(t))tg.room=.5;else{tg.wind=.22;tg.crowd=t>=34&&t<38?0:.28}}
+  else if(S.tp===1){tg.water=.35;tg.wind=.12;if(b==='V')tg.drone=.12;if(b==='X')tg.crowd=.08}
+  else if(S.tp===2){if(b==='O')tg.room=.45;else{tg.crowd=.22;tg.room=.15}}
+  else{tg.room=.4;if(b==='V'&&!S.left)tg.drone=.16;if(!S.left&&t>=14&&t<40)tg.crowd=.06}
+  for(const k in BEDS)BEDS[k].gain.setTargetAtTime(tg[k]*fac,a.currentTime,.06);
+  const cl=tg.crowd*fac;CB.gain.setTargetAtTime(Math.min(1,cl*3.2),a.currentTime,.08);
+  CBF.frequency.setTargetAtTime(S.tp===2||S.tp===3?900:1700,a.currentTime,.1);
+  crowdTick(dt,cl,S.tp===0);
+  const c=curCap();const sp=c&&c.includes('「')?speaker():null;
+  if(sp&&av>.3){sylT-=dt*Math.min(3,av);if(sylT<=0){const r=av>1.3?Math.min(2.6,av*.75):1;for(const [f,v] of VOX[sp])syl(f,v,r,S.vel<0);sylT=.11+Math.random()*.09+(Math.random()<.12?.22:0)}}
+}
+
+/* ---------- UI ---------- */
+function say(s){$('log').textContent=s}
+function renderShelf(){$('shelf').innerHTML=TAPES.map((T,i)=>`<button type="button" class="tape${i===S.tp?' on':''}" data-i="${i}" ${S.unlocked[i]?'':'disabled'} aria-label="테이프 ${i+1} ${T.label}"><span class="lbl">${T.label}</span><span class="reel"><i></i><i></i></span><small>${S.done[i]?'기록함':T.soon?'다음 버전':S.unlocked[i]?'마을회관 도장':'잠김'}</small></button>`).join('')}
+$('shelf').addEventListener('click',e=>{const b=e.target.closest('.tape');if(!b||b.disabled||S.lock)return;load(+b.dataset.i)});
+function load(i){$('rec').textContent=i===2?'■ 자막 대조':'■ 이 프레임 기록';S.rec=0;S.ccKey='';S.tp=i;S.t=0;S.target=null;S.vel=0;S.speed=1;S.playing=false;S.v=.5;S.stat=.5;S.wave=0;const T=TAPES[i];
+  $('tl').value=0;$('tr').value=.5;$('tr').disabled=!T.track;$('trl').textContent=T.track?'TRACKING':'TRACKING (잠김)';
+  $('clue').textContent=T.clue;$('play').textContent='▶';renderShelf();tone(90,.25,'square',.05);
+  say(['라벨: 「마을 잔치」. 언니 글씨 위에 마을회관 도장이 찍혀 있다.\n언니가 찍은 테이프 위에 마을이 덮어 녹화했다.','라벨: 「11월 10일」. 이 테이프도 덮어써져 있다.\nTRACKING 다이얼이 움직인다.','라벨: 「11월 17일」. 마을회관 회의 영상으로 덮여 있다.\n자막까지 고쳐 놓았다.','테이프를 넣자 빨간 불이 켜졌다. ● REC\n이 방이, 지금, 찍히고 있다.'][i]);if(TAPES[i].live){setMode(true,1)}setHiss()}
+function addBook(text,img){S.book.push({text,img});$('book').innerHTML=S.book.map(b=>b.img?`<div class="e"><img src="${b.img}" alt=""><div>${b.text}</div></div>`:`<div class="e t"><div>${b.text}</div></div>`).join('')}
+const maxT=()=>TAPES[S.tp].live&&!S.left?S.rec:60;
+function setT(t){S.target=null;S.t=clamp(t,0,maxT());$('tl').value=S.t}
+function stopPlay(){S.playing=false;S.speed=1;$('play').textContent='▶';$('rew').classList.remove('act');$('ff').classList.remove('act')}
+function setMode(play,speed){S.playing=play;S.speed=speed;$('play').textContent=play&&speed===1?'❚❚':'▶';$('rew').classList.toggle('act',play&&speed<0);$('ff').classList.toggle('act',play&&speed>1);setHiss()}
+$('play').onclick=()=>{if(S.lock)return;if(S.t>=59.95)setT(0);setMode(!(S.playing&&S.speed===1),1);tone(160,.06,'square',.04)};
+$('rew').onclick=()=>{if(S.lock)return;setMode(!(S.playing&&S.speed<0),-4);tone(120,.08,'square',.04)};
+$('ff').onclick=()=>{if(S.lock)return;if(S.t>=59.95)setT(0);setMode(!(S.playing&&S.speed>1),4);tone(200,.08,'square',.04)};
+$('back').onclick=()=>{if(S.lock)return;stopPlay();setT(S.t-.2);tone(220,.03)};
+$('fwd').onclick=()=>{if(S.lock)return;stopPlay();setT(S.t+.2);tone(240,.03)};
+$('tl').addEventListener('input',()=>{if(S.lock){$('tl').value=S.t;return}S.target=Math.min(+$('tl').value,maxT());stopPlay();S.scrub=.3;setHiss()});
+$('tr').addEventListener('input',()=>{if(S.lock){$('tr').value=S.v;return}S.v=+$('tr').value;setHiss();if(Math.random()<.3)tone(80+S.v*400,.05,'sine',.02)});
+addEventListener('keydown',e=>{if(!S.inGame||$('intro').classList.contains('show')||$('end').classList.contains('show')||S.lock)return;
+  if(e.key===' '&&e.target.tagName!=='BUTTON'){e.preventDefault();$('play').click()}
+  if(e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowLeft'){e.preventDefault();$('back').click()}if(e.key==='ArrowRight'){e.preventDefault();$('fwd').click()}
+  if(TAPES[S.tp].track&&(e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();S.v=clamp(S.v+(e.key==='ArrowUp'?.03:-.03),0,1);$('tr').value=S.v;setHiss()}});
+
+/* ---------- 기록 판정 ---------- */
+$('rec').onclick=async()=>{
+  if(S.over||S.lock)return;
+  if(S.playing||S.target!=null){say('재생 중엔 기록할 수 없다. 먼저 정지하자.');return}
+  tone(1200,.05,'square',.04);const t=S.t;
+  if(S.tp===0){
+    const b=bleedAt(t);
+    if(b){if(S.got[b[2]]){say('이미 기록한 장면이다.');return}
+      S.got[b[2]]=1;addBook('마을 잔치 · '+tc(t)+'\n'+b[3],TV.toDataURL());tone(330,.5,'triangle',.06);
+      if(S.got.a&&S.got.b){S.done[0]=1;S.unlocked[1]=1;renderShelf();say('언니다. 덮어쓴 잔치 영상 사이에 언니가 남아 있었다.\n「11월 10일 밤, 마을 끝 다리.」\n\n테이프 2를 넣을 수 있다.')}
+      else say('언니다. 덮어쓴 잔치 영상 사이에 언니가 끼어 있다.\n하나 더 있을 것이다.');return}
+    if(t>=34&&t<38){say('모두 동시에 카메라를 본다. 다 똑같은 눈으로.');return}
+    say('마을 사람들이 웃고 있다. 다 똑같이.');return}
+  if(S.tp===3){
+    const b=band();
+    if(Math.abs(S.t-S.rec)<.35&&!S.left){say('지금 이 순간이다. 창밖의 얼굴들이 나를 보고 있다.');return}
+    if(b==='V'){if(!S.got.v4){S.got.v4=1;addBook('REC · 마을 채널\n내가 서 있던 자리에 시커먼 그것이 서 있다.')}say('마을 채널 속, 내가 서 있던 자리에 시커먼 그것이 서 있다.\n…마을 사람들 눈엔 내가 그것이다.\n창밖 얼굴들은 전부 똑같다. 원본으로 봐야 할 것 같다.');return}
+    if(b==='X'){say('내 눈에 비친 마을 사람들. 전부 같은 가면이다.\n머리 모양까지 똑같이 보인다. 누가 누군지 모르겠다.');return}
+    if(t>=14&&t<40){S.done[3]=1;addBook('REC · '+tc(t)+'\n가운데 창문의 얼굴. 별 모양 머리핀.'+(t>=32?' 창문을 톡톡 두드리고 있다.':''),TV.toDataURL());renderShelf();await finale4();return}
+    say(t>=14&&t<40?'창밖에 똑같은 얼굴들이 웃고 있다.':'창밖은 어둡다.');return}
+  if(S.tp===2){
+    const T=TAPES[2],n=T.lines.filter((l,i)=>S.sub[i]===l.ans).length;
+    if(n===T.lines.length){S.done[2]=1;renderShelf();await finale3();return}
+    say(`원본 자막과 대조했다. ${T.lines.length}줄 중 ${n}줄이 맞는다.\n원본 자막은 TRACKING을 밝게 했을 때 화면에 ■ 칸으로 비친다. 칸 수를 세어 보자.`);return}
+  if(S.tp===1){
+    const b=band();
+    if(b==='X'){if(!S.got.x){S.got.x=1;addBook('11월 10일 · 어둡게\n바깥 사람 눈에는 마을 사람들 얼굴이 전부 같은 가면이다.')}say('어둡게 돌리자 다른 눈으로 본 화면이 나온다.\n마을 사람들 얼굴이 전부 똑같은 가면이다.\n…바깥 사람에겐 우리가 이렇게 보였구나.');return}
+    if(b==='O'){
+      if(t>=30&&t<45){S.done[1]=1;addBook('11월 10일 · 원본\n언니, 그리고 「그것」이라 불린 사람.',TV.toDataURL());renderShelf();await finale();return}
+      say(t<28?'원본에는 아무도 없는 다리뿐이다. 마을 사람들도, 그것도.':'언니와 그 사람이 산길 쪽으로 걸어간다.');return}
+    say(t>=26&&t<48?'마을 사람들 앞에 시커먼 그것이 서 있다.\n마을 테이프에선 그렇게 찍혀 있다.':'마을 사람들이 등불을 들고 서 있다. 다 같은 얼굴로.');return}
+};
+async function finale(){
+  S.lock=1;S.wave=1;say('언니가 있다. 마을이 「그것」이라 부른 사람은, 그냥 등산모를 쓴 사람이었다.');tone(330,1,'triangle',.06);await sleep(2200);
+  say('정지 화면 속 언니가 카메라를 똑바로 본다.\n…나를.');await sleep(2400);
+  say('TRACKING 다이얼이 저절로 돌아간다.');
+  for(let i=0;i<30;i++){S.v=lerp(S.v,.5,.18);$('tr').value=S.v;setHiss();tone(90+i*6,.05,'sine',.02);await sleep(60)}
+  S.v=.5;$('tr').value=.5;S.wave=0;say('마을 테이프로 돌아왔다.\n「가까이 가지 마. 말 걸지 마.」');await sleep(2400);
+  S.stat=1.4;setHiss();await sleep(1500);
+  $('endP').textContent='다이얼은 다시 가운데에서 멈췄다.\n\n서랍 깊은 곳에서 테이프가 하나 더 나왔다.\n라벨: 「11월 17일」';
+  $('end').classList.add('show');S.lock=0;S.unlocked[2]=1;renderShelf();
+}
+$('endBtn').onclick=()=>{$('end').classList.remove('show');say(S.done[3]?'테이프는 다 봤다.':S.done[2]?'남은 테이프는 「REC」 하나다.':'테이프 3 「11월 17일」을 넣을 수 있다.')};
+$('restart').onclick=()=>location.reload();
+async function finale4(){
+  S.lock=1;const ago=Math.round(S.rec-S.t);
+  say('별 모양 머리핀. …언니다.\n가운데 창문의 얼굴. '+ago+'초 전, 언니가 거기 있었다.\n32초쯤 창문을 톡톡 두드리던 것도 언니였다.');tone(330,1.2,'triangle',.06);await sleep(3000);
+  S.rec=Math.max(S.rec,51);S.t=S.rec;$('tl').value=S.t;S.v=.82;$('tr').value=.82;setMode(true,1);
+  say('고개를 들어 창문을 봤다.\n아무도 없다.');await sleep(3000);
+  say('밖으로 뛰어나갔다.\n똑같은 얼굴들이 웃으며 서 있었다.\n누가 언니인지 알 수 없었다. 아무도 나를 부르지 않았다.');await sleep(4200);
+  say('나는 마을을 떠났다.');await sleep(2200);
+  S.left=1;S.rec=60;S.t=53;$('tl').value=53;setMode(true,1);
+  say('카메라는 아무도 없는 방을 계속 찍고 있었다.');
+  while(S.playing)await sleep(100);
+  await sleep(1400);S.stat=2;setHiss();await sleep(2100);
+  $('end').querySelector('h2').textContent='우물';
+  $('endP').textContent='나는 끝내 언니를 알아보지 못했다.\n\n마을은 바깥을 괴물이라 불렀고,\n나는 마을 사람들이 다 똑같다고 했다.\n그 사이에서 언니는 계속 나를 부르고 있었다.\n\n— 끝 —';
+  $('restart').hidden=false;$('end').classList.add('show');S.lock=0;
+}
+async function finale3(){
+  S.lock=1;S.restored=1;S.ccKey='';say('자막이 원본과 맞았다. 언니가 실제로 한 말이 돌아왔다.\n마지막 부분을 다시 본다. 이번엔 원본으로.');tone(330,1,'triangle',.06);await sleep(2600);
+  for(let i=0;i<20;i++){S.v=lerp(S.v,.82,.25);$('tr').value=S.v;setHiss();await sleep(40)}S.v=.82;$('tr').value=.82;
+  S.t=40;$('tl').value=40;S.playing=true;S.speed=1;setHiss();say('');
+  while(S.t<57.5){await sleep(100)}
+  say('문이 열리고, 똑같은 얼굴들이 들어왔다.\n언니가 있던 자리에도, 똑같은 얼굴이 서 있다.');
+  while(S.playing){await sleep(100)}
+  await sleep(1200);S.stat=1.6;setHiss();await sleep(1700);
+  $('endP').textContent='「꼭 갈게. 기다려.」\n언니는 끝내 오지 못했다.\n덮어쓰기는 테이프에만 일어난 게 아니었다.\n\n서랍에 마지막 테이프가 남아 있다.\n라벨 대신 빨간 글씨: 「REC」';
+  $('end').classList.add('show');S.lock=0;S.unlocked[3]=1;renderShelf();
+}
+
+/* ================= 오프닝 · 타이틀 · 3D 방 ================= */
+const LET=[
+  ['첫 번째 편지','잘 지내?\n여긴 여전해. 다들 똑같이 지내.\n네가 준 별 머리핀, 아직 매일 하고 다녀.\n바깥은 어때? 무섭지는 않아?\n\n— 언니'],
+  ['두 번째 편지','답장 잘 받았어.\n근데 「거기서 빨리 나와」라는 말은 이제 그만해.\n여기도 사람 사는 데야.\n\n— 언니'],
+  ['마지막 편지','편지는 중간에서 다 읽혀.\n이제부터는 테이프로 보낼게.\n마을 사람들이 덮어써도, 사이사이엔 내가 남아 있을 거야.\n\n— 언니']
+];
+function mkc(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
+function ditherTo(src,dctx,grain=.05){const w=src.width,h=src.height,id=src.getContext('2d').getImageData(0,0,w,h),d=id.data;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,l=(d[i]*.3+d[i+1]*.59+d[i+2]*.11)/255,th=(B4[(y&3)*4+(x&3)]+.5)/16+(Math.random()-.5)*grain,c=l>th?PAL[1]:PAL[0];d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255}
+  dctx.putImageData(id,0,0)}
+let typer=null;
+function typeInto(el,txt){return new Promise(res=>{if(typer)clearInterval(typer.id);el.textContent='';let i=0;const id=setInterval(()=>{i++;el.textContent=txt.slice(0,i);if(i%2&&!/\s/.test(txt[i-1]))tone(620+Math.random()*120,.025,'square',.012);if(i>=txt.length){clearInterval(id);typer=null;res()}},38);typer={id,txt,el,res}})}
+function finishType(){if(!typer)return false;clearInterval(typer.id);typer.el.textContent=typer.txt;const r=typer.res;typer=null;r();return true}
+
+/* ---------- 오프닝 그림 (192x108) ---------- */
+const CW=192,CH=108,CO=mkc(CW,CH),CG=CO.getContext('2d',{willReadFrequently:true}),CUTC=$('cutc').getContext('2d');
+function sky(g,top,bot){const gr=g.createLinearGradient(0,0,0,CH);gr.addColorStop(0,G(top));gr.addColorStop(1,G(bot));g.fillStyle=gr;g.fillRect(0,0,CW,CH)}
+const PIC={
+  village(g,t){sky(g,235,200);for(let i=0;i<2;i++){const x=((i*90+t*4)%240)-30;ell(g,x,14+i*8,14,4,G(250))}mountains(g,false);
+    g.fillStyle=G(170);g.fillRect(0,96,CW,20);for(let i=0;i<7;i++){const x=40+i*18,y=86+(i%2)*4;g.fillStyle=G(225);g.fillRect(x,y,12,9);poly(g,[[x-2,y],[x+6,y-6],[x+14,y]],G(60))}
+    g.strokeStyle=G(90);g.lineWidth=1;g.beginPath();g.moveTo(150,92);g.quadraticCurveTo(170,60,186,40);g.stroke()},
+  kids(g,t){sky(g,238,205);poly(g,[[0,108],[0,84],[60,74],[130,78],[192,70],[192,108]],G(165));ell(g,150,22,10,10,G(250));
+    put2(g,'front',80,100,2,t);put2(g,'mefront',112,100,2,t);g.fillStyle=G(240);},
+  same(g,t){sky(g,200,170);g.fillStyle=G(150);g.fillRect(0,92,CW,20);for(let i=0;i<4;i++)put2(g,(t*1.2|0)%2&&i===9?'stare':'vil',30+i*44,106+((t*2|0)%2?-1:0),2,t)},
+  leave(g,t){sky(g,215,180);mountains(g,false);g.fillStyle=G(160);g.fillRect(0,96,CW,20);g.strokeStyle=G(110);g.lineWidth=3;g.beginPath();g.moveTo(20,108);g.quadraticCurveTo(110,96,186,50);g.stroke();
+    for(let i=0;i<30;i++){g.fillStyle=G(255);g.fillRect((HS(i)*CW+t*6*HS(i+3))%CW,(HS(i+9)*CH+t*14)%CH,1,1)}
+    const k=Math.min(1,t/8);put2(g,step(t,3)?'meback':'meback',lerp(120,160,k),lerp(98,78,k),1,t);put2(g,(t*3|0)%2?'wave':'front',38,104,1,t)},
+  post(g,t){sky(g,120,90);for(let i=0;i<5;i++){const x=56+i*10,y=40+i*8;g.fillStyle=G(235);g.fillRect(x,y,60,34);g.strokeStyle=G(120);g.beginPath();g.moveTo(x,y);g.lineTo(x+30,y+18);g.lineTo(x+60,y);g.stroke();g.fillStyle=G(60);g.fillRect(x+48,y+4,8,8)}},
+  mailbox(g,t){sky(g,40,20);for(let i=0;i<30;i++){g.fillStyle=G(150+HS(i)*100);g.fillRect(HS(i+2)*CW,HS(i+5)*60,1,1)}g.fillStyle=G(30);g.fillRect(0,92,CW,20);
+    g.fillStyle=G(110);g.fillRect(94,58,4,40);g.fillStyle=G(170);g.fillRect(80,42,32,18);ell(g,96,42,16,6,G(170));g.fillStyle=G(10);g.fillRect(84,47,24,10);
+    const gr=g.createRadialGradient(96,50,2,96,60,60);gr.addColorStop(0,'rgba(255,255,255,.25)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,CW,CH)},
+  arrive(g,t){sky(g,30,14);ell(g,150,18,5,5,G(220));mountains(g,true);for(let i=0;i<14;i++)ell(g,50+HS(i)*90,74+HS(i+4)*14,.9,.9,(t*2+i|0)%9===0?G(60):G(235));
+    g.fillStyle=G(22);g.fillRect(0,96,CW,20);put2(g,'meback',96,108,2,t)},
+  greet(g,t){sky(g,40,24);mountains(g,true);for(let i=0;i<4;i++){const x=30+i*44;const gr=g.createRadialGradient(x+14,92,1,x+14,92,22);gr.addColorStop(0,'rgba(255,255,255,.55)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(x-12,66,52,50);put2(g,'vil',x,106,2,t)}},
+  house(g,t){sky(g,28,14);mountains(g,true);g.fillStyle=G(70);g.fillRect(56,46,80,52);poly(g,[[48,48],[96,22],[144,48]],G(36));g.fillStyle=G(20);g.fillRect(88,72,16,26);
+    g.fillStyle=(t*1.3|0)%5===0?G(150):G(235);g.fillRect(66,56,14,12);g.fillStyle=G(40);g.fillRect(72,56,1,12);g.fillStyle=G(18);g.fillRect(112,56,14,12);g.fillStyle=G(22);g.fillRect(0,98,CW,20)}
+};
+let CSP=[];function put2(g,k,x,y,sc,t){CSP.push({k,x:Math.round(x)-9*sc,y:Math.round(y)-SPR[k].length*sc,sc})}
+const CUT=[
+  {p:'village',t:'산으로 빙 둘러싸인 마을이 있었다.\n바깥으로 나가는 길은 고갯길 하나뿐이었다.'},
+  {p:'kids',t:'언니와 나는 그 마을에서 자랐다.\n언니는 내가 준 별 머리핀을 늘 꽂고 다녔다.'},
+  {p:'same',t:'마을 사람들은 모두 똑같이 웃고, 똑같이 말했다.\n「바깥은 무서운 데야. 여기 있으면 아무 일 없어.」'},
+  {p:'leave',t:'나는 그 웃음이 무서웠다.\n열일곱 살 겨울, 나는 혼자 고개를 넘었다.\n언니는 남았다. 멀리서 나를 오래 바라보았다.'},
+  {p:'post',t:'그 뒤로 우리는 편지로만 이야기했다.'},
+  {letter:0},{letter:1},{letter:2},
+  {p:'mailbox',t:'그리고, 편지가 끊겼다.'},
+  {title:1},
+  {p:'arrive',t:'그렇게 나는, 몇 년 만에 이 마을에 돌아왔다.'},
+  {p:'greet',t:'마을 사람들은 모두 같은 얼굴로 웃었다.\n「언니는 바깥 그것들한테 갔어.」'},
+  {p:'house',t:'언니가 살던 집. 언니 방은 그대로라고 했다.'}
+];
+let ci=-1,cutT=0,cutOn=false;
+async function cutNext(){
+  if(finishType())return;
+  ci++;if(ci>=CUT.length){endCut();return}
+  const c=CUT[ci];cutT=0;
+  $('cutPic').hidden=!!(c.letter!=null||c.title);$('cutLetter').hidden=c.letter==null;$('cutTitle').hidden=!c.title;$('cutTxt').hidden=!!(c.letter!=null||c.title);
+  if(c.letter!=null){$('cutLetterH').textContent=LET[c.letter][0];$('cutLetterP').textContent='';tone(500,.04,'square',.02);await typeInto($('cutLetterP'),LET[c.letter][1])}
+  else if(c.title){tone(110,1.4,'sine',.08);setTimeout(()=>{if(CUT[ci]&&CUT[ci].title)cutNext()},3200)}
+  else await typeInto($('cutTxt'),c.t);
+}
+function cutDraw(dt){if(!cutOn)return;cutT+=dt;const c=CUT[ci];if(!c||!c.p)return;CSP=[];CG.setTransform(1,0,0,1,0,0);PIC[c.p](CG,cutT);ditherTo(CO,CUTC,.04);for(const s of CSP)blit(CUTC,SPR[s.k],s.x,s.y,false,null,s.sc)}
+$('cut').addEventListener('click',e=>{if(e.target.id==='cutSkip')return;cutNext()});
+$('cutSkip').onclick=()=>{finishType();endCut()};
+function endCut(){cutOn=false;$('cut').classList.remove('show');roomStart()}
+$('boot').querySelector('button').onclick=()=>{const a=ac();if(a&&a.resume)a.resume().catch(()=>{});audioInit();startHiss();if(hiss)hiss.gn.gain.value=.004;$('boot').classList.remove('show');$('cut').classList.add('show');cutOn=true;ci=-1;cutNext()};
+addEventListener('keydown',e=>{if(cutOn&&(e.key==='Enter'||e.key===' '||e.key==='z')){e.preventDefault();cutNext()}});
+
+/* ---------- 로우폴리 3D 방 (소프트웨어 렌더러 → 2색 디더링) ---------- */
+const RW=256,RH=144,RO=mkc(RW,RH),RG=RO.getContext('2d',{willReadFrequently:true}),RCX=$('roomc').getContext('2d');
+const V=(x,y,z)=>[x,y,z],sub3=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],nrm=a=>{const l=Math.hypot(...a)||1;return[a[0]/l,a[1]/l,a[2]/l]};
+const TRI=[];
+function quad(a,b,c,d,col,want,tag){let n=nrm(cross(sub3(b,a),sub3(c,a)));if(want&&dot(n,want)<0){[b,d]=[d,b];n=n.map(v=>-v)}TRI.push({v:[a,b,c],n,c:col,tag});TRI.push({v:[a,c,d],n,c:col,tag})}
+function tiled(o,u,v,nu,nv,col,want,alt,tag){for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){const p=(s,t)=>[o[0]+u[0]*s+v[0]*t,o[1]+u[1]*s+v[1]*t,o[2]+u[2]*s+v[2]*t];
+  const cc=alt?col+((i+j)%2?alt:0)+(HS(i*7+j*3)-.5)*alt*.6:col;quad(p(i/nu,j/nv),p((i+1)/nu,j/nv),p((i+1)/nu,(j+1)/nv),p(i/nu,(j+1)/nv),cc,want,tag)}}
+function box(x0,y0,z0,x1,y1,z1,col,tag,skip=''){const F=[
+  ['+x',[[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[x1,y0,z1]],[1,0,0]],['-x',[[x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]],[-1,0,0]],
+  ['+y',[[x0,y1,z0],[x0,y1,z1],[x1,y1,z1],[x1,y1,z0]],[0,1,0]],['-y',[[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]],[0,-1,0]],
+  ['+z',[[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]],[0,0,1]],['-z',[[x0,y0,z0],[x0,y1,z0],[x1,y1,z0],[x1,y0,z0]],[0,0,-1]]];
+  for(const[f,p,n]of F)if(!skip.includes(f))quad(p[0],p[1],p[2],p[3],col*(f==='+y'?1.08:1),n,tag)}
+// 방: x -2~2, z -2~2, 높이 2.6. 문은 z=+2 벽 가운데, 복도는 z 2~4.6
+(function build(){
+  tiled([-2,0,2],[4,0,0],[0,0,-4],8,8,92,[0,1,0],12);            // 바닥 (판자 체크)
+  tiled([-2,2.6,-2],[4,0,0],[0,0,4],4,4,120,[0,-1,0]);             // 천장
+  tiled([-2,0,-2],[4,0,0],[0,2.6,0],6,4,175,[0,0,1],3);            // 뒷벽
+  tiled([-2,0,2],[0,0,-4],[0,2.6,0],6,4,170,[1,0,0],3);            // 왼벽
+  tiled([2,0,-2],[0,0,4],[0,2.6,0],6,4,170,[-1,0,0],3);            // 오른벽
+  tiled([-2,0,2],[1.55,0,0],[0,2.6,0],2,4,165,[0,0,-1],8);tiled([.45,0,2],[1.55,0,0],[0,2.6,0],2,4,165,[0,0,-1],8);tiled([-.45,2.05,2],[.9,0,0],[0,.55,0],1,1,165,[0,0,-1]); // 앞벽(문 구멍)
+  box(-.5,0,1.96,-.45,2.05,2.04,80);box(.45,0,1.96,.5,2.05,2.04,80);box(-.5,2.05,1.96,.5,2.12,2.04,80); // 문틀
+  quad([-.45,0,2],[-.45,2.05,2],[-.95,2.05,2.5],[-.95,0,2.5],95,[1,0,-.6]);                // 열린 문짝
+  tiled([-.6,0,4.6],[1.2,0,0],[0,0,-2.6],2,4,70,[0,1,0],10);tiled([-.6,2.4,2],[1.2,0,0],[0,0,2.6],1,3,50,[0,-1,0]); // 복도
+  tiled([-.6,0,4.6],[0,0,-2.6],[0,2.4,0],3,2,60,[1,0,0]);tiled([.6,0,2],[0,0,2.6],[0,2.4,0],3,2,60,[-1,0,0]);tiled([.6,0,4.6],[-1.2,0,0],[0,2.4,0],1,2,40,[0,0,-1]);
+  // 침대
+  box(-2,0,-2,-.9,.42,0,70,'bed');box(-1.95,.42,-1.95,-.95,.52,-.05,215,'bed');box(-1.85,.52,-1.9,-1.05,.64,-1.5,240,'bed');box(-1.95,.52,-1.4,-.95,.6,-.05,170,'bed');box(-2,.4,-2,-.9,1.1,-1.92,90,'bed');
+  // 책상 + 스탠드
+  box(1.2,.72,-2,2,.78,-1.1,130,'desk');box(1.25,0,-1.95,1.31,.72,-1.89,70);box(1.89,0,-1.95,1.95,.72,-1.89,70);box(1.25,0,-1.2,1.31,.72,-1.14,70);box(1.89,0,-1.2,1.95,.72,-1.14,70);
+  box(1.6,.78,-1.75,1.72,.82,-1.63,60);box(1.64,.82,-1.71,1.68,1.1,-1.67,60);box(1.5,1.05,-1.8,1.78,1.16,-1.55,90);
+  // 창문 (뒷벽)
+  box(-.7,1,-1.99,.7,1.06,-1.93,210);box(-.7,1.94,-1.99,.7,2,-1.93,210);box(-.7,1,-1.99,-.64,2,-1.93,210);box(.64,1,-1.99,.7,2,-1.93,210);box(-.03,1,-1.99,.03,2,-1.94,210);
+  quad([-.64,1.06,-1.985],[.64,1.06,-1.985],[.64,1.94,-1.985],[-.64,1.94,-1.985],14,[0,0,1],'win');
+  // 서랍장 (왼벽)
+  box(-2,0,.5,-1.55,.95,1.6,105,'dresser');box(-1.56,.62,.6,-1.54,.85,1.5,80,'drawer');box(-1.56,.32,.6,-1.54,.55,1.5,80);box(-1.55,.72,1,-1.5,.76,1.1,220,'drawer');
+  // TV 장 + TV + 비디오 (오른벽)
+  box(1.5,0,.2,2,.5,1.2,85,'tvstand');box(1.52,.33,.4,1.54,.43,1,40,'vcr');box(1.53,.36,.6,1.55,.38,.8,200,'vcr');
+  box(1.6,.5,.3,2,1.05,1.1,70,'tv');quad([1.595,.56,.38],[1.595,.56,1.02],[1.595,1,1.02],[1.595,1,.38],30,[-1,0,0],'screen');
+  // 포스터
+  quad([-1.99,1.2,-.9],[-1.99,1.2,-.3],[-1.99,1.8,-.3],[-1.99,1.8,-.9],215,[1,0,0]);
+})();
+const LAMP=[1.64,1.05,-1.67],TVP=[1.5,.78,.7],SUN=nrm([.45,.75,.35]);
+const OBJ3=[{k:'drawer',p:[-1.55,.75,1.05],l:'서랍 열기'},{k:'tv',p:[1.58,.78,.7],l:'비디오테이프 넣기'},{k:'win',p:[0,1.5,-1.95],l:'창밖 보기'},{k:'bed',p:[-1.4,.6,-1],l:'침대 보기'},{k:'desk',p:[1.6,.85,-1.5],l:'책상 보기'}];
+const BLK=[[-2,-2,-.9,0],[1.2,-2,2,-1.1],[-2,.5,-1.55,1.6],[1.5,.2,2,1.2]];
+const R={on:false,pos:[0,1.55,4.1],yaw:0,pitch:0,fov:68,keys:{},hold:{},tapes:0,lock:0,tgt:null,tvOn:0,entered:0,said:{}};
+function roomStart(){R.on=true;$('room').classList.add('show');roomSay('복도 끝, 언니 방 문이 열려 있다.')}
+function project(p,cam,cy,sy,cp,sp,f){let x=p[0]-cam[0],y=p[1]-cam[1],z=p[2]-cam[2];const x1=x*cy-z*sy,z1=x*sy+z*cy;const y2=y*cp+z1*sp,z2=-y*sp+z1*cp;return[x1,y2,z2]}
+function renderRoom(){
+  const cam=R.pos,cy=Math.cos(R.yaw),sy=Math.sin(R.yaw),cp=Math.cos(R.pitch),sp=Math.sin(R.pitch),f=(RH/2)/Math.tan(R.fov*Math.PI/360),near=-.05,list=[];
+  const tvGlow=R.tvOn?(.7+Math.random()*.3):(.25+Math.random()*.15);
+  for(const T of TRI){
+    const c0=T.v[0];if(dot(T.n,sub3(cam,c0))<=0)continue;
+    let poly3=T.v.map(p=>project(p,cam,cy,sy,cp,sp,f));
+    if(poly3.every(p=>p[2]>near))continue;
+    if(poly3.some(p=>p[2]>near)){const out=[];for(let i=0;i<poly3.length;i++){const a=poly3[i],b=poly3[(i+1)%poly3.length],ai=a[2]<=near,bi=b[2]<=near;if(ai)out.push(a);if(ai!==bi){const k=(near-a[2])/(b[2]-a[2]);out.push([a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k,near])}}poly3=out;if(poly3.length<3)continue}
+    const ctr=[(T.v[0][0]+T.v[1][0]+T.v[2][0])/3,(T.v[0][1]+T.v[1][1]+T.v[2][1])/3,(T.v[0][2]+T.v[1][2]+T.v[2][2])/3];
+    const L1=sub3(LAMP,ctr),d1=Math.hypot(...L1),L2=sub3(TVP,ctr),d2=Math.hypot(...L2);
+    const L3=sub3([0,2.3,.2],ctr),d3=Math.hypot(...L3);
+    let I=.3+Math.max(0,dot(T.n,SUN))*.28+Math.max(0,dot(T.n,L1)/d1)*1.1/(1+d1*d1*.3)+Math.max(0,dot(T.n,L3)/d3)*.45/(1+d3*d3*.15)+Math.max(0,dot(T.n,L2)/d2)*tvGlow/(1+d2*d2*.6);
+    if(ctr[2]>2.05)I*=.55;
+    let col=T.c*I;if(T.tag==='screen')col=R.tvOn?150+Math.random()*90:20+Math.random()*50;if(T.tag==='win')col=14;
+    if(R.tgt&&T.tag===R.tgt)col+=26;
+    let dep=0;for(const p of poly3)dep+=p[2];list.push({pts:poly3.map(p=>[RW/2+p[0]/-p[2]*f,RH/2-p[1]/-p[2]*f]),d:dep/poly3.length,c:col})}
+  list.sort((a,b)=>a.d-b.d);
+  RG.fillStyle='#000';RG.fillRect(0,0,RW,RH);
+  for(const t of list){RG.fillStyle=G(t.c);RG.beginPath();RG.moveTo(t.pts[0][0],t.pts[0][1]);for(let i=1;i<t.pts.length;i++)RG.lineTo(t.pts[i][0],t.pts[i][1]);RG.closePath();RG.fill();RG.strokeStyle=G(t.c);RG.lineWidth=.6;RG.stroke()}
+  const gr=RG.createRadialGradient(RW/2,RH/2,40,RW/2,RH/2,170);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,.55)');RG.fillStyle=gr;RG.fillRect(0,0,RW,RH);
+  ditherTo(RO,RCX,.015);
+  if(R.tgt&&!R.lock){RCX.fillStyle='#e6e0cf';RCX.fillRect(RW/2-1,RH/2-1,2,2)}
+}
+function blocked(x,z){const r=.22;if(z>2-r&&z<2+r&&Math.abs(x)>.45-r)return true;if(z>=2){return Math.abs(x)>.6-r||z>4.6-r}if(Math.abs(x)>2-r||z<-2+r)return true;for(const b of BLK)if(x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true;return false}
+function roomTick(dt){if(!R.on)return;
+  if(!R.lock){const k=R.keys,h=R.hold,fw=(k.w||k.ArrowUp||h.f?1:0)-(k.s||k.ArrowDown||h.b?1:0),st=(k.d?1:0)-(k.a?1:0),turn=(k.ArrowRight||h.r?1:0)-(k.ArrowLeft||h.l?1:0);
+    R.yaw-=turn*dt*1.9;const fx=-Math.sin(R.yaw),fz=-Math.cos(R.yaw),rx=Math.cos(R.yaw),rz=-Math.sin(R.yaw),sp=1.6*dt;
+    let nx=R.pos[0]+(fx*fw+rx*st)*sp,nz=R.pos[2]+(fz*fw+rz*st)*sp;if(!blocked(nx,R.pos[2]))R.pos[0]=nx;if(!blocked(R.pos[0],nz))R.pos[2]=nz;
+    if((fw||st)&&Math.random()<dt*3.2)SFX.step(1);
+    R.pos[1]=1.55+((fw||st)?Math.sin(performance.now()/120)*.025:0);
+    if(!R.entered&&R.pos[2]<1.7){R.entered=1;roomSay('언니 방. 떠날 때 그대로다.\n방 안쪽에 TV와 비디오 데크가 있다.')}
+    const fwd=[-Math.sin(R.yaw)*Math.cos(R.pitch),Math.sin(R.pitch),-Math.cos(R.yaw)*Math.cos(R.pitch)];let best=null,bd=.84;
+    for(const o of OBJ3){const v=sub3(o.p,R.pos),d=Math.hypot(...v);if(d>2.1)continue;const a=dot(fwd,v)/d;if(a>bd){bd=a;best=o}}
+    R.tgt=best?best.k==='drawer'?'drawer':best.k==='tv'?'screen':best.k:null;R.tobj=best;
+    $('act').textContent=best?best.l:'살펴보기';$('act').disabled=!best;$('hint').textContent=best?'[E] '+best.l:''}
+  renderRoom()}
+async function roomAct(){const o=R.tobj;if(!o||R.lock)return;
+  if(o.k==='drawer'){if(R.tapes){roomSay('서랍은 비어 있다.');return}R.tapes=1;tone(200,.15,'square',.04);roomSay('서랍 깊은 곳에 날짜가 적힌 비디오테이프 네 개.\n「마을 잔치」 「11월 10일」 「11월 17일」, 그리고 빨간 글씨로 「REC」.\n라벨 위에 마을회관 도장이 찍혀 있다.')}
+  else if(o.k==='tv'){if(!R.tapes){roomSay('오래된 TV와 비디오 데크. 넣을 테이프가 없다.');return}insertTape()}
+  else if(o.k==='win')roomSay('창밖으로 마을 불빛이 보인다.\n불빛 몇 개가 동시에 꺼졌다가, 동시에 켜진다.');
+  else if(o.k==='bed')roomSay('잘 정리된 침대. 베개 위에 머리카락 한 올.');
+  else if(o.k==='desk')roomSay('책상 위에 내 주소가 적힌 빈 봉투. 우표는 붙어 있지 않다.')}
+async function insertTape(){R.lock=1;$('act').disabled=true;$('hint').textContent='';roomSay('「마을 잔치」를 비디오 데크에 넣었다.');
+  tone(90,.3,'square',.06);setTimeout(()=>tone(60,.4,'square',.06),250);
+  const p0=R.pos.slice(),y0=R.yaw,pt=R.pitch,f0=R.fov,p1=[.95,1.05,.7],y1=-Math.PI/2;let dy=y1-y0;while(dy>Math.PI)dy-=2*Math.PI;while(dy<-Math.PI)dy+=2*Math.PI;
+  const t0=performance.now();await new Promise(res=>{const st=()=>{const k=Math.min(1,(performance.now()-t0)/1800),e=k*k*(3-2*k);R.pos=[lerp(p0[0],p1[0],e),lerp(p0[1],p1[1],e),lerp(p0[2],p1[2],e)];R.yaw=y0+dy*e;R.pitch=lerp(pt,-.12,e);if(k<1)requestAnimationFrame(st);else res()};st()});
+  R.tvOn=1;tone(1500,.4,'sine',.03);await sleep(500);
+  const t1=performance.now();await new Promise(res=>{const st=()=>{const k=Math.min(1,(performance.now()-t1)/1300);R.fov=lerp(68,14,k*k);if(k<1)requestAnimationFrame(st);else res()};st()});
+  R.on=false;$('room').classList.remove('show');S.inGame=1;$('intro').classList.add('show')}
+function roomSay(t){typeInto($('roomTxt'),t)}
+addEventListener('keydown',e=>{if(!R.on)return;R.keys[e.key.length===1?e.key.toLowerCase():e.key]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key==='Enter'||e.key===' '){if(!finishType())roomAct()}});
+addEventListener('keyup',e=>{R.keys[e.key.length===1?e.key.toLowerCase():e.key]=false});
+{let drag=null;const c=$('roomc');c.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,yaw:R.yaw,pitch:R.pitch,moved:0};c.setPointerCapture(e.pointerId)});
+ c.addEventListener('pointermove',e=>{if(!drag||R.lock)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=1;R.yaw=drag.yaw-dx*.006;R.pitch=clamp(drag.pitch-dy*.005,-.9,.7)});
+ c.addEventListener('pointerup',()=>{if(drag&&!drag.moved){if(!finishType())roomAct()}drag=null});c.addEventListener('pointercancel',()=>drag=null)}
+for(const b of document.querySelectorAll('[data-mv]')){const k=b.dataset.mv,on=e=>{e.preventDefault();R.hold[k]=1},off=()=>{R.hold[k]=0};b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off);b.addEventListener('pointercancel',off)}
+$('act').onclick=()=>{if(!finishType())roomAct()};
+$('roomTxt').parentElement.addEventListener('click',()=>finishType());
+$('start').onclick=()=>{S.inGame=1;$('intro').classList.remove('show');load(0)};
+
+/* ---------- 루프 ---------- */
+let last=performance.now(),acc=0,cAcc=0,rAcc=0;
+function renderCC(){
+  const T=TAPES[S.tp];
+  if(S.tp===2){const li=T.lines.findIndex(l=>S.t>=l.a&&S.t<l.b);
+    if(li>=0){const l=T.lines[li],key='L'+li+'-'+S.sub[li]+'-'+S.restored;if(S.ccKey!==key){S.ccKey=key;
+      const w=S.restored?'<span class="who">원본 자막</span>':'<span class="who">마을 자막 · 밑줄을 눌러 바꾸기</span>';
+      $('cc').innerHTML=w+'「'+l.pre+(S.restored?l.opt[l.ans]:`<button type="button" class="slot" data-li="${li}">${l.opt[S.sub[li]]}</button>`)+l.post+'」';$('cc').classList.remove('dim')}return}}
+  const c=curCap(),key='C'+(c||'');if(S.ccKey!==key){S.ccKey=key;$('cc').textContent=c||'…';$('cc').classList.toggle('dim',!c)}
+}
+$('cc').addEventListener('click',e=>{const b=e.target.closest('.slot');if(!b||S.lock)return;const li=+b.dataset.li,l=TAPES[2].lines[li];S.sub[li]=(S.sub[li]+1)%l.opt.length;tone(600,.04,'square',.03);S.ccKey=''});
+function curCap(){const T=TAPES[S.tp];if(S.tp===0){const b=bleedAt(S.t);if(b)return b[3]}const list=T.caps[band()]||T.caps.V;const c=list.find(c=>S.t>=c[0]&&S.t<c[1]);return c?c[2]:null}
+function loop(now){const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt;
+  const prev=S.t;
+  if(S.target!=null){const d=S.target-S.t;S.t+=Math.abs(d)<.02?d:d*Math.min(1,dt*14);if(Math.abs(S.target-S.t)<.01){S.t=S.target;S.target=null}}
+  else if(S.playing){S.t+=dt*S.speed;
+    if(TAPES[S.tp].live&&!S.left&&S.t>=S.rec){S.t=S.rec;if(S.speed!==1)setMode(true,1)}
+    else if(S.t>=60||S.t<=0){S.t=clamp(S.t,0,60);stopPlay();setHiss()}$('tl').value=S.t}
+  if(TAPES[S.tp].live&&!S.left&&!S.lock){S.rec=Math.min(60,S.rec+dt)}
+  $('tl').style.setProperty('--rec',TAPES[S.tp].live?(S.left?100:S.rec/60*100)+'%':'0%');
+  fireEvents(prev,S.t);updateAudio(dt);
+  const v=dt>0?(S.t-prev)/dt:0;S.vel+=(v-S.vel)*Math.min(1,dt*10);if(Math.abs(S.vel)<.05)S.vel=0;
+  if(Math.abs(S.vel)>1.5&&Math.random()<dt*8)tone(260+Math.abs(S.vel)*30,.05,'sawtooth',.008);
+  if(S.scrub>0){S.scrub-=dt;if(S.scrub<=0)setHiss()}
+  if(S.stat>0){S.stat-=dt;if(S.stat<=0)setHiss()}
+  renderCC();
+  $('tcode').textContent=tc(S.t);
+  if(acc>1/20){acc=0;if(S.inGame)render()}
+  if(cutOn){cAcc+=dt;if(cAcc>1/12){cutDraw(cAcc);cAcc=0}}
+  if(R.on){rAcc+=dt;if(rAcc>1/30){roomTick(rAcc);rAcc=0}}
+  requestAnimationFrame(loop)}
+renderShelf();$('clue').textContent=TAPES[0].clue;$('tr').disabled=true;$('trl').textContent='TRACKING (잠김)';say('');
+requestAnimationFrame(loop);
+}
+</script>
+</body></html>
